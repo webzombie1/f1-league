@@ -1,0 +1,23 @@
+# Environment
+.env
+__pycache__/
+*.pyc
+
+# Data
+data/*.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Google OAuth
+client_secret.json
+token.json
+
+# OS
+.DS_Store
+*.swp
+
+# IDE
+.vscode/
+.idea/
