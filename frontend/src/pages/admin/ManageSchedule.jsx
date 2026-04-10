@@ -12,33 +12,17 @@ export default function ManageSchedule() {
 
   useEffect(() => {
     get('/seasons/active').then(s => {
-      if (s.id) {
-        setSeasonId(s.id)
-        get(`/races?season_id=${s.id}`).then(setRaces)
-      }
+      if (s.id) { setSeasonId(s.id); get(`/races?season_id=${s.id}`).then(setRaces) }
     }).catch(() => {})
   }, [])
 
-  const load = () => {
-    if (seasonId) get(`/races?season_id=${seasonId}`).then(setRaces)
-  }
+  const load = () => { if (seasonId) get(`/races?season_id=${seasonId}`).then(setRaces) }
 
   const create = async (e) => {
     e.preventDefault()
     if (!track.trim() || !round || !seasonId) return
-    await post('/admin/races', {
-      season_id: seasonId,
-      round_number: parseInt(round),
-      track_name: track,
-      country,
-      date,
-      time,
-    })
-    setRound('')
-    setTrack('')
-    setCountry('')
-    setDate('')
-    setTime('')
+    await post('/admin/races', { season_id: seasonId, round_number: parseInt(round), track_name: track, country, date, time })
+    setRound(''); setTrack(''); setCountry(''); setDate(''); setTime('')
     load()
   }
 
@@ -53,88 +37,56 @@ export default function ManageSchedule() {
     load()
   }
 
+  const inputCls = "w-full bg-[#141A2E] border border-[#2A3458] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] placeholder-[#555F78] focus:outline-none focus:border-[#7ED321]"
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Manage Schedule</h1>
 
-      <form onSubmit={create} className="bg-white border border-stone-200 rounded-xl p-5 space-y-3">
+      <form onSubmit={create} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5 space-y-3">
         <div className="flex gap-3">
           <div className="w-20">
-            <label className="block text-xs text-stone-400 uppercase tracking-wider mb-1">Round</label>
-            <input
-              type="number"
-              value={round}
-              onChange={e => setRound(e.target.value)}
-              placeholder="1"
-              className="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#B5764B]"
-            />
+            <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Round</label>
+            <input type="number" value={round} onChange={e => setRound(e.target.value)} placeholder="1" className={inputCls} />
           </div>
           <div className="flex-1">
-            <label className="block text-xs text-stone-400 uppercase tracking-wider mb-1">Track</label>
-            <input
-              value={track}
-              onChange={e => setTrack(e.target.value)}
-              placeholder="Bahrain International Circuit"
-              className="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#B5764B]"
-            />
+            <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Track</label>
+            <input value={track} onChange={e => setTrack(e.target.value)} placeholder="Bahrain International Circuit" className={inputCls} />
           </div>
           <div className="w-32">
-            <label className="block text-xs text-stone-400 uppercase tracking-wider mb-1">Country</label>
-            <input
-              value={country}
-              onChange={e => setCountry(e.target.value)}
-              placeholder="Bahrain"
-              className="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#B5764B]"
-            />
+            <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Country</label>
+            <input value={country} onChange={e => setCountry(e.target.value)} placeholder="Bahrain" className={inputCls} />
           </div>
         </div>
         <div className="flex gap-3 items-end">
           <div className="w-40">
-            <label className="block text-xs text-stone-400 uppercase tracking-wider mb-1">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#B5764B]"
-            />
+            <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Date</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputCls} />
           </div>
           <div className="w-28">
-            <label className="block text-xs text-stone-400 uppercase tracking-wider mb-1">Time</label>
-            <input
-              type="time"
-              value={time}
-              onChange={e => setTime(e.target.value)}
-              className="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#B5764B]"
-            />
+            <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Time</label>
+            <input type="time" value={time} onChange={e => setTime(e.target.value)} className={inputCls} />
           </div>
-          <button type="submit" className="bg-[#B5764B] hover:bg-[#A36840] text-white px-4 py-2 rounded-lg text-sm font-medium">
-            Add Race
-          </button>
+          <button type="submit" className="bg-[#7ED321] hover:bg-[#6BC11A] text-[#141A2E] font-semibold px-4 py-2 rounded-lg text-sm">Add Race</button>
         </div>
       </form>
 
       <div className="space-y-2">
         {races.map(r => (
-          <div key={r.id} className="bg-white border border-stone-200 rounded-xl p-4 flex items-center justify-between">
+          <div key={r.id} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-4 flex items-center justify-between">
             <div>
-              <span className="text-stone-400 text-sm mr-2">R{r.round_number}</span>
-              <span className="font-medium">{r.track_name}</span>
-              <span className="text-stone-400 text-sm ml-2">
-                {r.country}{r.date ? ` — ${r.date}` : ''}
-              </span>
+              <span className="text-[#8892A8] text-sm mr-2">R{r.round_number}</span>
+              <span className="font-medium text-[#E8ECF4]">{r.track_name}</span>
+              <span className="text-[#8892A8] text-sm ml-2">{r.country}{r.date ? ` — ${r.date}` : ''}</span>
             </div>
             <div className="flex gap-3 items-center">
               {r.status === 'upcoming' && (
-                <button onClick={() => markCompleted(r.id)} className="text-xs text-green-600 hover:underline">
-                  Mark Completed
-                </button>
+                <button onClick={() => markCompleted(r.id)} className="text-xs text-[#7ED321] hover:underline">Mark Completed</button>
               )}
               {r.status === 'completed' && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-md">Completed</span>
+                <span className="text-xs bg-[#7ED321]/15 text-[#7ED321] px-2 py-1 rounded-md">Completed</span>
               )}
-              <button onClick={() => remove(r.id)} className="text-xs text-red-500 hover:underline">
-                Delete
-              </button>
+              <button onClick={() => remove(r.id)} className="text-xs text-red-400 hover:underline">Delete</button>
             </div>
           </div>
         ))}

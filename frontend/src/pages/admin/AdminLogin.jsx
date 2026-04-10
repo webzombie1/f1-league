@@ -32,11 +32,11 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9F7F4] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#141A2E] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-semibold text-[#B5764B] mb-2">Admin</h1>
-          <p className="text-stone-400 text-sm">F1 League Management</p>
+          <h1 className="text-3xl font-bold text-[#7ED321] mb-2">Admin</h1>
+          <p className="text-[#8892A8] text-sm">F1 League Management</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
@@ -45,13 +45,13 @@ export default function AdminLogin() {
             onChange={e => setPassword(e.target.value)}
             placeholder="Password"
             autoFocus
-            className="w-full bg-white border border-stone-300 rounded-xl px-4 py-3 text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-[#B5764B] focus:ring-1 focus:ring-[#B5764B]"
+            className="w-full bg-[#1E2642] border border-[#2A3458] rounded-xl px-4 py-3 text-sm text-[#E8ECF4] placeholder-[#555F78] focus:outline-none focus:border-[#7ED321] focus:ring-1 focus:ring-[#7ED321]"
           />
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
           <button
             type="submit"
             disabled={loading || !password.trim()}
-            className="w-full bg-[#B5764B] hover:bg-[#A36840] disabled:bg-stone-200 disabled:text-stone-400 text-white py-3 rounded-xl text-sm font-medium transition-colors"
+            className="w-full bg-[#7ED321] hover:bg-[#6BC11A] disabled:bg-[#2A3458] disabled:text-[#555F78] text-[#141A2E] font-semibold py-3 rounded-xl text-sm transition-colors"
           >
             {loading ? 'Verifying...' : 'Enter'}
           </button>

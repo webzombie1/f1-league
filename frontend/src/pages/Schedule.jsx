@@ -14,27 +14,27 @@ export default function Schedule() {
   }, [])
 
   if (loading) {
-    return <div className="flex justify-center py-20"><p className="text-stone-400 text-sm">Loading...</p></div>
+    return <div className="flex justify-center py-20"><p className="text-[#8892A8] text-sm">Loading...</p></div>
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-stone-800">Season Schedule</h1>
+      <h1 className="text-2xl font-bold text-[#E8ECF4]">Season Schedule</h1>
 
       <div className="space-y-3">
         {races.map(race => (
           <div
             key={race.id}
-            className={`bg-white border rounded-xl p-5 transition-colors ${
-              race.status === 'completed' ? 'border-stone-200' : 'border-[#B5764B]/30'
+            className={`bg-[#1E2642] border rounded-xl p-5 transition-colors ${
+              race.status === 'completed' ? 'border-[#2A3458]' : 'border-[#7ED321]/30'
             }`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-stone-400 w-12">R{race.round_number}</span>
+                <span className="text-sm font-medium text-[#8892A8] w-12">R{race.round_number}</span>
                 <div>
-                  <p className="font-medium text-stone-800">{race.track_name}</p>
-                  <p className="text-sm text-stone-400 mt-0.5">
+                  <p className="font-medium text-[#E8ECF4]">{race.track_name}</p>
+                  <p className="text-sm text-[#8892A8] mt-0.5">
                     {race.country}
                     {race.date ? ` — ${race.date}` : ''}
                     {race.time ? ` at ${race.time}` : ''}
@@ -45,14 +45,14 @@ export default function Schedule() {
                 {race.status === 'completed' ? (
                   <Link
                     to={`/race/${race.id}`}
-                    className="text-sm text-[#B5764B] hover:underline"
+                    className="text-sm text-[#7ED321] hover:underline"
                   >
                     Results →
                   </Link>
                 ) : race.status === 'cancelled' ? (
-                  <span className="text-sm text-stone-400">Cancelled</span>
+                  <span className="text-sm text-[#555F78]">Cancelled</span>
                 ) : (
-                  <span className="text-xs bg-[#B5764B]/10 text-[#B5764B] px-2 py-1 rounded-md font-medium">
+                  <span className="text-xs bg-[#7ED321]/15 text-[#7ED321] px-2 py-1 rounded-md font-medium">
                     Upcoming
                   </span>
                 )}
@@ -61,7 +61,7 @@ export default function Schedule() {
           </div>
         ))}
         {races.length === 0 && (
-          <p className="text-center text-stone-400 text-sm py-8">No races scheduled yet.</p>
+          <p className="text-center text-[#555F78] text-sm py-8">No races scheduled yet.</p>
         )}
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { get, post, put, del } from '../../api'
+import { get, post, del } from '../../api'
 
 export default function ManageTeams() {
   const [teams, setTeams] = useState([])
@@ -9,16 +9,11 @@ export default function ManageTeams() {
 
   useEffect(() => {
     get('/seasons/active').then(s => {
-      if (s.id) {
-        setSeasonId(s.id)
-        get(`/teams?season_id=${s.id}`).then(setTeams)
-      }
+      if (s.id) { setSeasonId(s.id); get(`/teams?season_id=${s.id}`).then(setTeams) }
     }).catch(() => {})
   }, [])
 
-  const load = () => {
-    if (seasonId) get(`/teams?season_id=${seasonId}`).then(setTeams)
-  }
+  const load = () => { if (seasonId) get(`/teams?season_id=${seasonId}`).then(setTeams) }
 
   const create = async (e) => {
     e.preventDefault()
@@ -38,43 +33,28 @@ export default function ManageTeams() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Manage Teams</h1>
 
-      <form onSubmit={create} className="bg-white border border-stone-200 rounded-xl p-5 flex gap-3 items-end">
+      <form onSubmit={create} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5 flex gap-3 items-end">
         <div className="flex-1">
-          <label className="block text-xs text-stone-400 uppercase tracking-wider mb-1">Team Name</label>
-          <input
-            value={name}
-            onChange={e => setName(e.target.value)}
-            placeholder="Red Bull Racing"
-            className="w-full bg-white border border-stone-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#B5764B]"
-          />
+          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Team Name</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Red Bull Racing"
+            className="w-full bg-[#141A2E] border border-[#2A3458] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] placeholder-[#555F78] focus:outline-none focus:border-[#7ED321]" />
         </div>
         <div className="w-20">
-          <label className="block text-xs text-stone-400 uppercase tracking-wider mb-1">Color</label>
-          <input
-            type="color"
-            value={color}
-            onChange={e => setColor(e.target.value)}
-            className="w-full h-9 rounded-lg cursor-pointer"
-          />
+          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Color</label>
+          <input type="color" value={color} onChange={e => setColor(e.target.value)} className="w-full h-9 rounded-lg cursor-pointer bg-transparent" />
         </div>
-        <button type="submit" className="bg-[#B5764B] hover:bg-[#A36840] text-white px-4 py-2 rounded-lg text-sm font-medium">
-          Add
-        </button>
+        <button type="submit" className="bg-[#7ED321] hover:bg-[#6BC11A] text-[#141A2E] font-semibold px-4 py-2 rounded-lg text-sm">Add</button>
       </form>
 
       <div className="space-y-2">
         {teams.map(t => (
-          <div key={t.id} className="bg-white border border-stone-200 rounded-xl p-4 flex items-center justify-between">
+          <div key={t.id} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: t.color }} />
-              <span className="font-medium">{t.name}</span>
-              <span className="text-stone-400 text-sm">
-                ({(t.drivers || []).length} driver{(t.drivers || []).length !== 1 ? 's' : ''})
-              </span>
+              <span className="font-medium text-[#E8ECF4]">{t.name}</span>
+              <span className="text-[#8892A8] text-sm">({(t.drivers || []).length} driver{(t.drivers || []).length !== 1 ? 's' : ''})</span>
             </div>
-            <button onClick={() => remove(t.id)} className="text-xs text-red-500 hover:underline">
-              Delete
-            </button>
+            <button onClick={() => remove(t.id)} className="text-xs text-red-400 hover:underline">Delete</button>
           </div>
         ))}
       </div>
