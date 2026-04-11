@@ -24,7 +24,7 @@ export default function TeamDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div>
         <Link to="/teams" className="text-sm text-[#7ED321] hover:underline">← Teams</Link>
         <div className="flex items-center gap-3 mt-2">

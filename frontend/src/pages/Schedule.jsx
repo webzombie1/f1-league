@@ -18,7 +18,7 @@ export default function Schedule() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <h1 className="text-2xl font-bold text-[#E8ECF4]">Season Schedule</h1>
 
       <div className="space-y-3">

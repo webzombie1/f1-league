@@ -175,9 +175,13 @@ async def create_race(request: Request):
     if not season_id or not round_number or not track_name:
         return {"error": "season_id, round_number, and track_name are required."}
 
+    hero_image = body.get("hero_image", "")
+    hero_headline = body.get("hero_headline", "")
+    hero_subtitle = body.get("hero_subtitle", "")
+
     race_id = execute(
-        "INSERT INTO races (season_id, round_number, track_name, country, date, time) VALUES (?, ?, ?, ?, ?, ?)",
-        (season_id, round_number, track_name, country, date, time), fetch="none"
+        "INSERT INTO races (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle), fetch="none"
     )
     return {"id": race_id, "track_name": track_name}
 
@@ -188,7 +192,7 @@ async def update_race(race_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("round_number", "track_name", "country", "date", "time", "status"):
+    for field in ("round_number", "track_name", "country", "date", "time", "status", "hero_image", "hero_headline", "hero_subtitle"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])

@@ -32,11 +32,11 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-[#141A2E] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#0D1117] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-[#7ED321] mb-2">Admin</h1>
-          <p className="text-[#8892A8] text-sm">F1 League Management</p>
+          <p className="text-[#8892A8] text-sm">GDR League Management</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <input

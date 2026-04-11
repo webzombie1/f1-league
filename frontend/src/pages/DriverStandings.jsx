@@ -18,7 +18,7 @@ export default function DriverStandings() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[#E8ECF4]">Driver Standings</h1>
         <Link to="/standings/constructors" className="text-sm text-[#7ED321] hover:underline">

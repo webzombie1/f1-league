@@ -52,6 +52,9 @@ CREATE TABLE IF NOT EXISTS races (
     date            TEXT,
     time            TEXT DEFAULT '',
     status          TEXT DEFAULT 'upcoming',
+    hero_image      TEXT DEFAULT '',
+    hero_headline   TEXT DEFAULT '',
+    hero_subtitle   TEXT DEFAULT '',
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
     UNIQUE(season_id, round_number)
 );

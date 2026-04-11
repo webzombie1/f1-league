@@ -34,7 +34,7 @@ export default function RaceResult() {
   const results = race.results || []
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <div>
         <Link to="/schedule" className="text-sm text-[#7ED321] hover:underline">← Schedule</Link>
         <h1 className="text-2xl font-bold text-[#E8ECF4] mt-2">
