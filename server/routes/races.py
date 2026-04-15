@@ -34,7 +34,8 @@ async def get_race(race_id: int):
             d.abbreviation AS driver_abbreviation,
             d.number AS driver_number,
             t.name AS team_name,
-            t.color AS team_color
+            t.color AS team_color,
+            t.car_image AS team_car_image
         FROM race_results rr
         LEFT JOIN drivers d ON rr.driver_id = d.id
         LEFT JOIN teams t ON d.team_id = t.id

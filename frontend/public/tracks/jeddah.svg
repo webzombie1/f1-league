@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600" fill="none" stroke="#7ED321" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Jeddah Corniche Circuit - simplified layout -->
+  <path d="M200 560
+           L200 520
+           Q200 500 210 485
+           L230 450
+           Q240 435 240 420
+           L240 350
+           Q240 330 225 320
+           L190 300
+           Q170 290 170 270
+           L170 220
+           Q170 200 185 190
+           L220 170
+           Q240 160 240 140
+           L240 100
+           Q240 80 225 70
+           L200 55
+           Q180 45 160 55
+           L140 70
+           Q120 80 120 100
+           L120 130
+           Q120 150 135 160
+           L150 180
+           Q160 195 150 210
+           L130 240
+           Q120 255 120 275
+           L120 320
+           Q120 340 130 350
+           L155 375
+           Q170 390 170 410
+           L170 450
+           Q170 470 160 480
+           L140 510
+           Q130 525 140 540
+           L160 555
+           Q175 565 200 560 Z"
+           opacity="0.8"/>
+  <!-- Start/Finish line -->
+  <line x1="195" y1="555" x2="205" y2="555" stroke="#fff" stroke-width="4" opacity="0.6"/>
+</svg>

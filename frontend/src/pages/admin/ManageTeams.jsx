@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { get, post, del } from '../../api'
+import { get, post, put, del } from '../../api'
 
 export default function ManageTeams() {
   const [teams, setTeams] = useState([])
   const [seasonId, setSeasonId] = useState(null)
   const [name, setName] = useState('')
   const [color, setColor] = useState('#E80020')
+  const [carImage, setCarImage] = useState('')
 
   useEffect(() => {
     get('/seasons/active').then(s => {
@@ -18,8 +19,14 @@ export default function ManageTeams() {
   const create = async (e) => {
     e.preventDefault()
     if (!name.trim() || !seasonId) return
-    await post('/admin/teams', { season_id: seasonId, name, color })
+    await post('/admin/teams', { season_id: seasonId, name, color, car_image: carImage })
     setName('')
+    setCarImage('')
+    load()
+  }
+
+  const updateCarImage = async (teamId, url) => {
+    await put(`/admin/teams/${teamId}`, { car_image: url })
     load()
   }
 
@@ -29,32 +36,54 @@ export default function ManageTeams() {
     load()
   }
 
+  const inputCls = "w-full bg-[#141A2E] border border-[#2A3458] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] placeholder-[#555F78] focus:outline-none focus:border-[#7ED321]"
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Manage Teams</h1>
 
-      <form onSubmit={create} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5 flex gap-3 items-end">
-        <div className="flex-1">
-          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Team Name</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Red Bull Racing"
-            className="w-full bg-[#141A2E] border border-[#2A3458] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] placeholder-[#555F78] focus:outline-none focus:border-[#7ED321]" />
+      <form onSubmit={create} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5 space-y-3">
+        <div className="flex gap-3 items-end">
+          <div className="flex-1">
+            <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Team Name</label>
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Red Bull Racing" className={inputCls} />
+          </div>
+          <div className="w-20">
+            <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Color</label>
+            <input type="color" value={color} onChange={e => setColor(e.target.value)} className="w-full h-9 rounded-lg cursor-pointer bg-transparent" />
+          </div>
+          <button type="submit" className="bg-[#7ED321] hover:bg-[#6BC11A] text-[#141A2E] font-semibold px-4 py-2 rounded-lg text-sm">Add</button>
         </div>
-        <div className="w-20">
-          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Color</label>
-          <input type="color" value={color} onChange={e => setColor(e.target.value)} className="w-full h-9 rounded-lg cursor-pointer bg-transparent" />
+        <div>
+          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Car Image URL</label>
+          <input value={carImage} onChange={e => setCarImage(e.target.value)} placeholder="https://... or /cars/ferrari.png" className={inputCls} />
         </div>
-        <button type="submit" className="bg-[#7ED321] hover:bg-[#6BC11A] text-[#141A2E] font-semibold px-4 py-2 rounded-lg text-sm">Add</button>
       </form>
 
       <div className="space-y-2">
         {teams.map(t => (
-          <div key={t.id} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: t.color }} />
-              <span className="font-medium text-[#E8ECF4]">{t.name}</span>
-              <span className="text-[#8892A8] text-sm">({(t.drivers || []).length} driver{(t.drivers || []).length !== 1 ? 's' : ''})</span>
+          <div key={t.id} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: t.color }} />
+                <span className="font-medium text-[#E8ECF4]">{t.name}</span>
+                <span className="text-[#8892A8] text-sm">({(t.drivers || []).length} driver{(t.drivers || []).length !== 1 ? 's' : ''})</span>
+                {t.car_image && (
+                  <img src={t.car_image} alt="" className="h-6 object-contain opacity-60" />
+                )}
+              </div>
+              <button onClick={() => remove(t.id)} className="text-xs text-red-400 hover:underline">Delete</button>
             </div>
-            <button onClick={() => remove(t.id)} className="text-xs text-red-400 hover:underline">Delete</button>
+            <div className="flex gap-2 items-center">
+              <input
+                defaultValue={t.car_image || ''}
+                placeholder="Car image URL..."
+                onBlur={e => {
+                  if (e.target.value !== (t.car_image || '')) updateCarImage(t.id, e.target.value)
+                }}
+                className="flex-1 bg-[#141A2E] border border-[#2A3458] rounded-lg px-2 py-1 text-xs text-[#E8ECF4] placeholder-[#555F78] focus:outline-none focus:border-[#7ED321]"
+              />
+            </div>
           </div>
         ))}
       </div>

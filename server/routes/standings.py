@@ -20,6 +20,7 @@ async def driver_standings(season_id: int = Query(None)):
             d.name,
             d.abbreviation,
             d.number,
+            d.photo_url,
             t.name AS team_name,
             t.color AS team_color,
             COALESCE(SUM(rr.points_awarded), 0) AS points,

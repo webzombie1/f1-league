@@ -17,3 +17,8 @@ TIMEZONE = os.getenv("TIMEZONE", "America/Chicago")
 # ---------------------
 _DATA_DIR = "/data" if os.path.isdir("/data") else os.path.join(os.path.dirname(__file__), "..", "data")
 DATABASE_PATH = os.path.join(_DATA_DIR, "f1league.db")
+
+# ---------------------
+# Gemini AI
+# ---------------------
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

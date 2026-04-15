@@ -1,8 +1,10 @@
 """Admin CRUD endpoints — all routes prefixed with /api/admin."""
 
+import json
 import logging
 from fastapi import APIRouter, Request
 from server.db import execute, get_conn
+from server.config import GEMINI_API_KEY
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -76,14 +78,15 @@ async def create_team(request: Request):
     season_id = body.get("season_id")
     name = body.get("name", "")
     color = body.get("color", "#333333")
+    car_image = body.get("car_image", "")
     sort_order = body.get("sort_order", 0)
 
     if not season_id or not name:
         return {"error": "season_id and name are required."}
 
     team_id = execute(
-        "INSERT INTO teams (season_id, name, color, sort_order) VALUES (?, ?, ?, ?)",
-        (season_id, name, color, sort_order), fetch="none"
+        "INSERT INTO teams (season_id, name, color, car_image, sort_order) VALUES (?, ?, ?, ?, ?)",
+        (season_id, name, color, car_image, sort_order), fetch="none"
     )
     return {"id": team_id, "name": name}
 
@@ -94,7 +97,7 @@ async def update_team(team_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("name", "color", "sort_order"):
+    for field in ("name", "color", "car_image", "sort_order"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -129,9 +132,11 @@ async def create_driver(request: Request):
     if not abbreviation and len(name) >= 3:
         abbreviation = name[:3].upper()
 
+    photo_url = body.get("photo_url", "")
+
     driver_id = execute(
-        "INSERT INTO drivers (season_id, team_id, name, abbreviation, number) VALUES (?, ?, ?, ?, ?)",
-        (season_id, team_id, name, abbreviation, number), fetch="none"
+        "INSERT INTO drivers (season_id, team_id, name, abbreviation, number, photo_url) VALUES (?, ?, ?, ?, ?, ?)",
+        (season_id, team_id, name, abbreviation, number, photo_url), fetch="none"
     )
     return {"id": driver_id, "name": name}
 
@@ -142,7 +147,7 @@ async def update_driver(driver_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("name", "abbreviation", "number", "team_id", "is_active"):
+    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -178,10 +183,11 @@ async def create_race(request: Request):
     hero_image = body.get("hero_image", "")
     hero_headline = body.get("hero_headline", "")
     hero_subtitle = body.get("hero_subtitle", "")
+    track_image = body.get("track_image", "")
 
     race_id = execute(
-        "INSERT INTO races (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle), fetch="none"
+        "INSERT INTO races (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle, track_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle, track_image), fetch="none"
     )
     return {"id": race_id, "track_name": track_name}
 
@@ -192,7 +198,7 @@ async def update_race(race_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("round_number", "track_name", "country", "date", "time", "status", "hero_image", "hero_headline", "hero_subtitle"):
+    for field in ("round_number", "track_name", "country", "date", "time", "status", "hero_image", "hero_headline", "hero_subtitle", "track_image"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -370,3 +376,146 @@ async def update_points_config(request: Request):
     conn.close()
 
     return {"status": "updated"}
+
+
+# ─── Articles ───────────────────────────────────────────────────────
+
+@router.get("/articles")
+async def list_admin_articles():
+    return execute("SELECT a.*, r.track_name FROM articles a LEFT JOIN races r ON a.race_id = r.id ORDER BY a.created_at DESC")
+
+
+@router.post("/articles")
+async def create_article(request: Request):
+    body = await request.json()
+    season_id = body.get("season_id")
+    race_id = body.get("race_id")
+    headline = body.get("headline", "")
+    subtitle = body.get("subtitle", "")
+    article_body = body.get("body", "")
+    hero_image = body.get("hero_image", "")
+
+    if not season_id or not headline:
+        return {"error": "season_id and headline are required."}
+
+    article_id = execute(
+        "INSERT INTO articles (season_id, race_id, headline, subtitle, body, hero_image) VALUES (?, ?, ?, ?, ?, ?)",
+        (season_id, race_id, headline, subtitle, article_body, hero_image), fetch="none"
+    )
+    return {"id": article_id, "headline": headline}
+
+
+@router.put("/articles/{article_id}")
+async def update_article(article_id: int, request: Request):
+    body = await request.json()
+    updates = []
+    params = []
+
+    for field in ("headline", "subtitle", "body", "hero_image", "race_id", "published"):
+        if field in body:
+            updates.append(f"{field} = ?")
+            params.append(body[field])
+
+    if updates:
+        params.append(article_id)
+        execute(f"UPDATE articles SET {', '.join(updates)} WHERE id = ?", tuple(params), fetch="none")
+
+    return {"status": "updated"}
+
+
+@router.delete("/articles/{article_id}")
+async def delete_article(article_id: int):
+    execute("DELETE FROM articles WHERE id = ?", (article_id,), fetch="none")
+    return {"status": "deleted"}
+
+
+@router.post("/articles/generate")
+async def generate_article(request: Request):
+    """Generate a comedic race recap article using Gemini."""
+    body = await request.json()
+    race_id = body.get("race_id")
+
+    if not race_id:
+        return {"error": "race_id is required."}
+
+    if not GEMINI_API_KEY:
+        return {"error": "GEMINI_API_KEY not configured."}
+
+    # Get race + results
+    race = execute("SELECT * FROM races WHERE id = ?", (race_id,), fetch="one")
+    if not race:
+        return {"error": "Race not found."}
+
+    results = execute("""
+        SELECT rr.*, d.name AS driver_name, t.name AS team_name
+        FROM race_results rr
+        LEFT JOIN drivers d ON rr.driver_id = d.id
+        LEFT JOIN teams t ON d.team_id = t.id
+        WHERE rr.race_id = ?
+        ORDER BY CASE WHEN rr.position IS NOT NULL THEN 0 ELSE 1 END, rr.position
+    """, (race_id,))
+
+    if not results:
+        return {"error": "No results for this race."}
+
+    # Build results summary for the prompt
+    results_text = ""
+    for r in results:
+        name = r["driver_name"] or r["driver_name_raw"] or "Unknown"
+        team = r["team_name"] or "Unknown"
+        if r["status"] == "finished":
+            results_text += f"P{r['position']}: {name} ({team}) - Gap: {r['gap_to_leader'] or 'Winner'}\n"
+        else:
+            results_text += f"{r['status'].upper()}: {name} ({team}) - {r['status_reason'] or 'Retired'}\n"
+
+    prompt = f"""You are a comedic motorsport journalist writing for the GDR League, an F1 25 esports racing league.
+Write a short, entertaining race recap article (about 300 words, 5-6 paragraphs) for the following race.
+
+Race: Round {race['round_number']} - {race['track_name']}, {race['country']}
+
+Results:
+{results_text}
+
+Guidelines:
+- Write in a professional motorsport journalism style but with dry wit and humor
+- Include 2-3 fake driver quotes (in quotation marks) that are funny but plausible
+- The winner should get the most coverage
+- Any DNFs or incidents should be dramatized for comedic effect
+- Keep it grounded in what actually happened — don't invent events that didn't occur
+- Use paragraph breaks between sections (output as plain text with blank lines between paragraphs)
+
+Return your response as JSON with these fields:
+- "headline": A punchy headline (e.g., "Hoecker Takes P1 in Australia")
+- "subtitle": A one-sentence subheadline summarizing the drama
+- "body": The full article text with paragraph breaks as \\n\\n"""
+
+    try:
+        from google import genai
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+
+        # Parse the JSON response
+        text = response.text.strip()
+        # Strip markdown code fences if present
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1]
+            if text.endswith("```"):
+                text = text[:-3]
+            elif "```" in text:
+                text = text[:text.rfind("```")]
+            text = text.strip()
+
+        article_data = json.loads(text)
+
+        return {
+            "headline": article_data.get("headline", ""),
+            "subtitle": article_data.get("subtitle", ""),
+            "body": article_data.get("body", ""),
+        }
+
+    except Exception as e:
+        logger.error("Article generation failed: %s", e, exc_info=True)
+        return {"error": f"Generation failed: {str(e)}"}

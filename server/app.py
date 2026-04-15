@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from server.db import init_db
-from server.routes import health, auth, admin, standings, races, drivers, teams, seasons
+from server.routes import health, auth, admin, standings, races, drivers, teams, seasons, articles
 from server.routes.auth import verify_session, verify_api_key
 
 
@@ -67,6 +67,7 @@ app.include_router(standings.router, prefix="/api", tags=["standings"])
 app.include_router(races.router, prefix="/api", tags=["races"])
 app.include_router(drivers.router, prefix="/api", tags=["drivers"])
 app.include_router(teams.router, prefix="/api", tags=["teams"])
+app.include_router(articles.router, prefix="/api", tags=["articles"])
 
 # Admin routes
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])

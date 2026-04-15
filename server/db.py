@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS teams (
     season_id   INTEGER NOT NULL,
     name        TEXT NOT NULL,
     color       TEXT NOT NULL DEFAULT '#333333',
+    car_image   TEXT DEFAULT '',
     sort_order  INTEGER DEFAULT 0,
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
 );
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS drivers (
     name            TEXT NOT NULL,
     abbreviation    TEXT DEFAULT '',
     number          INTEGER,
+    photo_url       TEXT DEFAULT '',
     is_active       INTEGER DEFAULT 1,
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
@@ -55,6 +57,7 @@ CREATE TABLE IF NOT EXISTS races (
     hero_image      TEXT DEFAULT '',
     hero_headline   TEXT DEFAULT '',
     hero_subtitle   TEXT DEFAULT '',
+    track_image     TEXT DEFAULT '',
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
     UNIQUE(season_id, round_number)
 );
@@ -80,6 +83,20 @@ CREATE TABLE IF NOT EXISTS race_results (
     FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE,
     FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE SET NULL,
     UNIQUE(race_id, driver_id)
+);
+
+CREATE TABLE IF NOT EXISTS articles (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    race_id         INTEGER,
+    season_id       INTEGER NOT NULL,
+    headline        TEXT NOT NULL,
+    subtitle        TEXT DEFAULT '',
+    body            TEXT DEFAULT '',
+    hero_image      TEXT DEFAULT '',
+    published       INTEGER DEFAULT 1,
+    created_at      TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE SET NULL,
+    FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS tyre_stints (

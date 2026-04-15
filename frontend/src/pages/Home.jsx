@@ -2,19 +2,112 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { get } from '../api'
 
-const DEFAULT_HERO = 'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=1600&h=600&fit=crop&q=80'
+const DEFAULT_HERO = '/hero-australia.jpeg'
+
+function StandingsSection({ topDrivers }) {
+  const [tab, setTab] = useState('drivers')
+
+  const constructors = Object.values(
+    topDrivers.reduce((acc, d) => {
+      const key = d.team_name || 'Unknown'
+      if (!acc[key]) acc[key] = { name: key, color: d.team_color, points: 0 }
+      acc[key].points += d.points
+      return acc
+    }, {})
+  ).sort((a, b) => b.points - a.points)
+
+  return (
+    <div>
+      {/* Tab switcher */}
+      <div className="flex gap-6 border-b border-[#2A3458] mb-4">
+        <button
+          onClick={() => setTab('drivers')}
+          className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors ${
+            tab === 'drivers'
+              ? 'text-[#E8ECF4] border-b-2 border-[#7ED321]'
+              : 'text-[#555F78] hover:text-[#8892A8]'
+          }`}
+        >
+          Drivers
+        </button>
+        <button
+          onClick={() => setTab('teams')}
+          className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors ${
+            tab === 'teams'
+              ? 'text-[#E8ECF4] border-b-2 border-[#7ED321]'
+              : 'text-[#555F78] hover:text-[#8892A8]'
+          }`}
+        >
+          Teams
+        </button>
+      </div>
+
+      {/* Standings list */}
+      {tab === 'drivers' ? (
+        <div className="space-y-0">
+          {topDrivers.slice(3).map((d, i) => (
+            <Link
+              key={d.id}
+              to={`/driver/${d.id}`}
+              className="flex items-center py-3.5 border-b border-[#2A3458]/40 hover:bg-[#1E2642]/50 transition-colors -mx-1 px-1 rounded"
+            >
+              <span className="text-sm font-bold text-[#555F78] w-10 text-center">{i + 4}</span>
+              <div className="w-1 h-6 rounded-full mx-3" style={{ backgroundColor: d.team_color || '#555' }} />
+              <div className="flex-1">
+                <span className="font-semibold text-[#E8ECF4]">{d.name}</span>
+                <span className="text-[#555F78] text-xs ml-2">{d.team_name}</span>
+              </div>
+              <span className="font-bold text-[#E8ECF4] text-sm">{d.points}</span>
+            </Link>
+          ))}
+          {topDrivers.length <= 3 && (
+            <p className="text-[#555F78] text-sm py-4">No additional drivers.</p>
+          )}
+          <div className="pt-4">
+            <Link to="/standings" className="text-xs text-[#7ED321] hover:underline uppercase tracking-wider">
+              Full Standings →
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-0">
+          {constructors.map((t, i) => (
+            <div
+              key={t.name}
+              className="flex items-center py-3.5 border-b border-[#2A3458]/40 -mx-1 px-1"
+            >
+              <span className="text-sm font-bold text-[#555F78] w-10 text-center">{i + 1}</span>
+              <div className="w-4 h-4 rounded-sm mx-3" style={{ backgroundColor: t.color || '#555' }} />
+              <span className="font-semibold text-[#E8ECF4] flex-1">{t.name}</span>
+              <span className="font-bold text-[#E8ECF4] text-sm">{t.points}</span>
+            </div>
+          ))}
+          {constructors.length === 0 && (
+            <p className="text-[#555F78] text-sm py-4">No standings yet.</p>
+          )}
+          <div className="pt-4">
+            <Link to="/standings/constructors" className="text-xs text-[#7ED321] hover:underline uppercase tracking-wider">
+              Full Standings →
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Home() {
   const [season, setSeason] = useState(null)
   const [races, setRaces] = useState([])
   const [topDrivers, setTopDrivers] = useState([])
   const [lastRaceData, setLastRaceData] = useState(null)
+  const [latestArticle, setLatestArticle] = useState(null)
   const [loading, setLoading] = useState(true)
   const scrollRef = useRef(null)
 
   const scroll = (direction) => {
     if (!scrollRef.current) return
-    const amount = 360 // ~2 tiles
+    const amount = 360
     scrollRef.current.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' })
   }
 
@@ -23,10 +116,16 @@ export default function Home() {
       get('/seasons/active'),
       get('/races'),
       get('/standings/drivers'),
-    ]).then(async ([s, r, d]) => {
+      get('/articles'),
+    ]).then(async ([s, r, d, articles]) => {
       setSeason(s)
       setRaces(r)
       setTopDrivers(d.slice(0, 5))
+
+      // Latest article
+      if (articles.length > 0) {
+        setLatestArticle(articles[0])
+      }
 
       // Fetch full results for the last completed race
       const lastCompleted = [...r].reverse().find(x => x.status === 'completed')
@@ -77,10 +176,10 @@ export default function Home() {
                 </p>
               )}
               <Link
-                to={`/race/${lastRace.id}`}
+                to={latestArticle ? `/article/${latestArticle.id}` : `/race/${lastRace.id}`}
                 className="inline-flex items-center mt-5 bg-[#7ED321] hover:bg-[#6BC11A] text-[#0D1117] font-bold uppercase text-sm tracking-wider px-6 py-3 rounded transition-colors w-fit"
               >
-                Full Results
+                {latestArticle ? 'Full Story' : 'Full Results'}
               </Link>
             </>
           ) : heroRace ? (
@@ -142,23 +241,35 @@ export default function Home() {
                       key={r.id}
                       className="flex-shrink-0 w-[170px] rounded-lg bg-[#141A2E] border border-[#2A3458] overflow-hidden hover:bg-[#1E2642] transition-colors"
                     >
-                      {/* Position overlapping the team color bar */}
-                      <div className="relative">
-                        {/* Team color diagonal bar — full width background */}
-                        <div className="h-7 overflow-hidden">
+                      {/* Position overlapping the team color bar + car image */}
+                      <div className="relative h-7 overflow-hidden">
+                        {/* Team color diagonal bar */}
+                        <div className="absolute inset-0 overflow-hidden">
                           <div
                             className="w-[120%] h-full origin-top-left -skew-x-12 -ml-2"
                             style={{ backgroundColor: r.team_color || '#555' }}
                           />
                         </div>
+                        {/* Car image faded in from the right */}
+                        {r.team_car_image && (
+                          <div className="absolute inset-0 flex items-center justify-end">
+                            <img
+                              src={r.team_car_image}
+                              alt=""
+                              className="h-5 object-contain mr-1 drop-shadow-lg"
+                              style={{
+                                maskImage: 'linear-gradient(to right, transparent 0%, black 30%)',
+                                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 30%)',
+                              }}
+                            />
+                          </div>
+                        )}
                         {/* Position text on top */}
-                        <span className={`absolute top-0.5 left-2 text-sm font-black drop-shadow-md ${
-                          isDNF ? 'text-white' : 'text-white'
-                        }`}>
+                        <span className="absolute top-1 left-2 text-sm font-black text-white drop-shadow-md">
                           {isDNF ? r.status?.toUpperCase() : `P${pos}`}
                         </span>
                         {r.fastest_lap ? (
-                          <span className="absolute top-1 right-2 text-[9px] font-bold text-purple-300 drop-shadow-md">FL</span>
+                          <span className="absolute top-1.5 right-2 text-[9px] font-bold text-purple-300 drop-shadow-md">FL</span>
                         ) : null}
                       </div>
 
@@ -203,73 +314,164 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Content below ── */}
+      {/* ── Video Highlights + Next Race ── */}
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Driver Standings */}
+          {/* Video Highlights */}
           <div className="lg:col-span-2 bg-[#141A2E] border border-[#2A3458] rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#2A3458]">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[#E8ECF4]">Driver Standings</h2>
-              <Link to="/standings" className="text-xs text-[#7ED321] hover:underline uppercase tracking-wider">View All →</Link>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[#E8ECF4]">Latest Highlights</h2>
             </div>
-            <table className="w-full text-sm">
-              <tbody>
-                {topDrivers.map((d, i) => (
-                  <tr key={d.id} className="border-b border-[#2A3458]/50 hover:bg-[#1E2642] transition-colors">
-                    <td className="py-3 px-5 w-10">
-                      <span className={`text-lg font-black ${i === 0 ? 'text-[#7ED321]' : 'text-[#555F78]'}`}>{i + 1}</span>
-                    </td>
-                    <td className="py-3 px-2">
-                      <Link to={`/driver/${d.id}`} className="flex items-center gap-3 hover:text-[#7ED321]">
-                        <div className="w-1 h-6 rounded-full" style={{ backgroundColor: d.team_color || '#555' }} />
-                        <div>
-                          <p className="font-semibold text-[#E8ECF4]">{d.name}</p>
-                          <p className="text-xs text-[#555F78]">{d.team_name}</p>
-                        </div>
-                      </Link>
-                    </td>
-                    <td className="py-3 px-2 text-center text-xs text-[#8892A8]">{d.wins}W</td>
-                    <td className="py-3 px-5 text-right">
-                      <span className="font-bold text-[#7ED321]">{d.points}</span>
-                      <span className="text-[#555F78] text-xs ml-1">pts</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {topDrivers.length === 0 && (
-              <p className="text-center text-[#555F78] text-sm py-8">No standings yet.</p>
-            )}
+            <div className="grid grid-cols-2 gap-3 p-4">
+              {[
+                { title: 'Race Highlights — Australia', thumbnail: '/hero-australia.jpeg', url: '' },
+                { title: 'Ling\'s Dramatic Crash', thumbnail: '/hero-australia.jpeg', url: '' },
+              ].map((video, i) => (
+                <a
+                  key={i}
+                  href={video.url || '#'}
+                  target={video.url ? '_blank' : undefined}
+                  rel="noopener noreferrer"
+                  className="group block rounded-lg overflow-hidden bg-[#0D1117] border border-[#2A3458] hover:border-[#7ED321]/40 transition-colors"
+                >
+                  <div className="relative aspect-video bg-[#1E2642] overflow-hidden">
+                    <img
+                      src={video.thumbnail}
+                      alt=""
+                      className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-full bg-[#7ED321]/90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-4 h-4 text-[#0D1117] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M8 5v14l11-7z"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="px-3 py-2 text-xs font-medium text-[#E8ECF4] truncate">
+                    {video.title}
+                  </p>
+                </a>
+              ))}
+            </div>
+            <div className="px-5 pb-4">
+              <a href="#" className="text-xs text-[#7ED321] hover:underline uppercase tracking-wider">More Highlights →</a>
+            </div>
           </div>
 
           {/* Next Race card */}
-          <div className="bg-[#141A2E] border border-[#2A3458] rounded-xl p-6 flex flex-col">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[#E8ECF4] mb-4">Next Race</h2>
-            {nextRace ? (
-              <div className="flex-1 flex flex-col justify-between">
-                <div>
-                  <p className="text-2xl font-black text-[#E8ECF4] uppercase">{nextRace.track_name}</p>
-                  <p className="text-sm text-[#8892A8] mt-1">
-                    Round {nextRace.round_number} · {nextRace.country}
-                  </p>
-                  {nextRace.date && (
-                    <p className="text-sm text-[#8892A8] mt-1">
-                      {nextRace.date}{nextRace.time ? ` at ${nextRace.time}` : ''}
-                    </p>
-                  )}
-                </div>
-                <Link
-                  to="/schedule"
-                  className="mt-6 text-xs text-[#7ED321] hover:underline uppercase tracking-wider"
-                >
-                  Full Schedule →
-                </Link>
+          <div className="bg-[#141A2E] border border-[#2A3458] rounded-xl overflow-hidden flex flex-col">
+            {/* Track image */}
+            {nextRace?.track_image && (
+              <div className="w-full h-36 overflow-hidden">
+                <img
+                  src={nextRace.track_image}
+                  alt={nextRace.track_name}
+                  className="w-full h-full object-cover"
+                />
               </div>
-            ) : (
-              <p className="text-[#555F78] text-sm italic">Season complete.</p>
             )}
+            <div className="p-6 flex-1 flex flex-col">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[#8892A8] mb-3">Next Race</h2>
+              {nextRace ? (
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <p className="text-xl font-black text-[#E8ECF4] uppercase">{nextRace.track_name}</p>
+                    <p className="text-sm text-[#8892A8] mt-1">
+                      Round {nextRace.round_number} · {nextRace.country}
+                    </p>
+                    {nextRace.date && (
+                      <p className="text-sm text-[#8892A8] mt-1">
+                        {nextRace.date}{nextRace.time ? ` at ${nextRace.time}` : ''}
+                      </p>
+                    )}
+                  </div>
+                  <Link
+                    to="/schedule"
+                    className="mt-4 text-xs text-[#7ED321] hover:underline uppercase tracking-wider"
+                  >
+                    Full Schedule →
+                  </Link>
+                </div>
+              ) : (
+                <p className="text-[#555F78] text-sm italic">Season complete.</p>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Season separator */}
+        <div>
+          <div className="relative h-4 overflow-hidden mb-6">
+            <div className="absolute top-0 left-0 right-8 h-[3px] bg-[#7ED321]" />
+            <div className="absolute top-[6px] left-12 right-0 h-[2px] bg-[#7ED321]/60" />
+          </div>
+          <h2 className="text-3xl md:text-4xl font-black text-[#E8ECF4] uppercase italic tracking-tight">
+            {season?.year || '2026'} Season
+          </h2>
+        </div>
+
+        {/* Podium Cards — Top 3 */}
+        {topDrivers.length >= 3 && (
+          <div className="grid grid-cols-3 gap-4">
+            {[topDrivers[0], topDrivers[1], topDrivers[2]].map((d, i) => {
+              const pos = i + 1
+              const suffix = pos === 1 ? 'ST' : pos === 2 ? 'ND' : 'RD'
+              const isCenter = pos === 1
+              return (
+                <Link
+                  key={d.id}
+                  to={`/driver/${d.id}`}
+                  className="relative rounded-xl overflow-hidden p-5 flex flex-col justify-between hover:brightness-110 transition"
+                  style={{ backgroundColor: d.team_color || '#333', minHeight: '220px' }}
+                >
+                  {/* Halftone/dot pattern overlay */}
+                  <div className="absolute inset-0 opacity-10" style={{
+                    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)',
+                    backgroundSize: '6px 6px',
+                  }} />
+
+                  {/* Content */}
+                  <div className="relative">
+                    <p className="text-white/70 text-sm font-black">
+                      {pos}<sup className="text-xs">{suffix}</sup>
+                    </p>
+                    <h3 className="font-black text-white uppercase text-2xl leading-tight mt-1">
+                      {d.name}
+                    </h3>
+                    <p className="text-white/60 text-sm italic mt-0.5">{d.team_name}</p>
+                  </div>
+
+                  {/* Points */}
+                  <div className="relative mt-4">
+                    <span className="font-black text-white text-3xl">{d.points}</span>
+                    <span className="text-white/60 text-sm ml-1 uppercase">pts</span>
+                  </div>
+
+                  {/* Driver photo — bottom right */}
+                  <div className="absolute bottom-0 right-0 w-48 h-full">
+                    {d.photo_url ? (
+                      <img
+                        src={d.photo_url}
+                        alt={d.name}
+                        className="w-full h-full object-contain object-bottom drop-shadow-2xl"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-end justify-center opacity-15">
+                        <svg className="w-16 h-20 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Drivers / Teams tab switcher + standings list */}
+        <StandingsSection topDrivers={topDrivers} />
       </div>
     </div>
   )

@@ -9,6 +9,7 @@ const ADMIN_NAV = [
   { to: '/admin/schedule', label: 'Schedule' },
   { to: '/admin/results', label: 'Results' },
   { to: '/admin/points', label: 'Points' },
+  { to: '/admin/articles', label: 'Articles' },
 ]
 
 export default function AdminLayout() {
