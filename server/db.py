@@ -122,9 +122,26 @@ def get_conn() -> sqlite3.Connection:
 
 
 def init_db():
-    """Create all tables if they don't exist."""
+    """Create all tables if they don't exist, and migrate missing columns."""
     conn = get_conn()
     conn.executescript(SCHEMA)
+
+    # Migrate: add columns that may be missing on older databases
+    migrations = [
+        ("races", "hero_image", "TEXT DEFAULT ''"),
+        ("races", "hero_headline", "TEXT DEFAULT ''"),
+        ("races", "hero_subtitle", "TEXT DEFAULT ''"),
+        ("races", "track_image", "TEXT DEFAULT ''"),
+        ("teams", "car_image", "TEXT DEFAULT ''"),
+        ("teams", "logo_url", "TEXT DEFAULT ''"),
+        ("drivers", "photo_url", "TEXT DEFAULT ''"),
+    ]
+    for table, column, col_type in migrations:
+        try:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
+        except Exception:
+            pass  # Column already exists
+
     conn.commit()
     conn.close()
 
