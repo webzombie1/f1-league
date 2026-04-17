@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS teams (
     name        TEXT NOT NULL,
     color       TEXT NOT NULL DEFAULT '#333333',
     car_image   TEXT DEFAULT '',
+    logo_url    TEXT DEFAULT '',
     sort_order  INTEGER DEFAULT 0,
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
 );

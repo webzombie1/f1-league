@@ -10,7 +10,7 @@ function StandingsSection({ topDrivers }) {
   const constructors = Object.values(
     topDrivers.reduce((acc, d) => {
       const key = d.team_name || 'Unknown'
-      if (!acc[key]) acc[key] = { name: key, color: d.team_color, points: 0 }
+      if (!acc[key]) acc[key] = { name: key, color: d.team_color, logo: d.team_logo, points: 0 }
       acc[key].points += d.points
       return acc
     }, {})
@@ -77,7 +77,9 @@ function StandingsSection({ topDrivers }) {
               className="flex items-center py-3.5 border-b border-[#2A3458]/40 -mx-1 px-1"
             >
               <span className="text-sm font-bold text-[#555F78] w-10 text-center">{i + 1}</span>
-              <div className="w-4 h-4 rounded-sm mx-3" style={{ backgroundColor: t.color || '#555' }} />
+              <div className="w-7 h-7 rounded-full mx-3 shrink-0 flex items-center justify-center" style={{ backgroundColor: t.color || '#555' }}>
+                {t.logo ? <img src={t.logo} alt="" className="w-4 h-4 object-contain" /> : null}
+              </div>
               <span className="font-semibold text-[#E8ECF4] flex-1">{t.name}</span>
               <span className="font-bold text-[#E8ECF4] text-sm">{t.points}</span>
             </div>
@@ -256,7 +258,7 @@ export default function Home() {
                             <img
                               src={r.team_car_image}
                               alt=""
-                              className="h-5 object-contain mr-1 drop-shadow-lg"
+                              className="h-5 object-contain mr-1 drop-shadow-lg -translate-x-[20px] -scale-x-100"
                               style={{
                                 maskImage: 'linear-gradient(to right, transparent 0%, black 30%)',
                                 WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 30%)',
@@ -268,8 +270,12 @@ export default function Home() {
                         <span className="absolute top-1 left-2 text-sm font-black text-white drop-shadow-md">
                           {isDNF ? r.status?.toUpperCase() : `P${pos}`}
                         </span>
+                        {/* Team logo top right */}
+                        {r.team_logo && (
+                          <img src={r.team_logo} alt="" className="absolute top-1 right-1.5 w-5 h-5 object-contain drop-shadow-md" />
+                        )}
                         {r.fastest_lap ? (
-                          <span className="absolute top-1.5 right-2 text-[9px] font-bold text-purple-300 drop-shadow-md">FL</span>
+                          <span className="absolute bottom-1 right-2 text-[9px] font-bold text-purple-300 drop-shadow-md">FL</span>
                         ) : null}
                       </div>
 
@@ -431,13 +437,25 @@ export default function Home() {
                     backgroundSize: '6px 6px',
                   }} />
 
+                  {/* Team logo — top right */}
+                  {d.team_logo && (
+                    <img src={d.team_logo} alt="" className="absolute top-4 right-4 w-10 h-10 object-contain opacity-70" />
+                  )}
+
                   {/* Content */}
                   <div className="relative">
-                    <p className="text-white/70 text-sm font-black">
-                      {pos}<sup className="text-xs">{suffix}</sup>
+                    <p className="text-white/70 font-black">
+                      <span className="text-2xl">{pos}</span><sup className="text-xs">{suffix}</sup>
                     </p>
-                    <h3 className="font-black text-white uppercase text-2xl leading-tight mt-1">
-                      {d.name}
+                    <h3 className="uppercase leading-tight mt-1">
+                      {d.name.includes(' ') ? (
+                        <>
+                          <span className="text-white/70 text-sm font-medium block leading-none">{d.name.split(' ').slice(0, -1).join(' ')}</span>
+                          <span className="font-black text-white text-2xl leading-none">{d.name.split(' ').slice(-1)[0]}</span>
+                        </>
+                      ) : (
+                        <span className="font-black text-white text-2xl">{d.name}</span>
+                      )}
                     </h3>
                     <p className="text-white/60 text-sm italic mt-0.5">{d.team_name}</p>
                   </div>

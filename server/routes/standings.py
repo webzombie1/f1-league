@@ -23,6 +23,7 @@ async def driver_standings(season_id: int = Query(None)):
             d.photo_url,
             t.name AS team_name,
             t.color AS team_color,
+            t.logo_url AS team_logo,
             COALESCE(SUM(rr.points_awarded), 0) AS points,
             COALESCE(SUM(CASE WHEN rr.position = 1 THEN 1 ELSE 0 END), 0) AS wins,
             COALESCE(SUM(CASE WHEN rr.position <= 3 AND rr.position IS NOT NULL THEN 1 ELSE 0 END), 0) AS podiums,
@@ -52,6 +53,7 @@ async def constructor_standings(season_id: int = Query(None)):
             t.id,
             t.name,
             t.color,
+            t.logo_url,
             COALESCE(SUM(rr.points_awarded), 0) AS points,
             COALESCE(SUM(CASE WHEN rr.position = 1 THEN 1 ELSE 0 END), 0) AS wins,
             COALESCE(SUM(CASE WHEN rr.position <= 3 AND rr.position IS NOT NULL THEN 1 ELSE 0 END), 0) AS podiums

@@ -42,11 +42,12 @@ export default function ConstructorStandings() {
               <tr key={t.id} className="border-b border-[#2A3458]/50 hover:bg-[#253052] transition-colors">
                 <td className="py-3 px-4 font-medium text-[#8892A8]">{i + 1}</td>
                 <td className="py-3 px-2">
-                  <Link to={`/teams/${t.id}`} className="flex items-center gap-2 hover:text-[#7ED321]">
-                    <div
-                      className="w-3 h-3 rounded-sm shrink-0"
-                      style={{ backgroundColor: t.color || '#555' }}
-                    />
+                  <Link to={`/teams/${t.id}`} className="flex items-center gap-3 hover:text-[#7ED321]">
+                    <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center" style={{ backgroundColor: t.color || '#555' }}>
+                      {t.logo_url ? (
+                        <img src={t.logo_url} alt="" className="w-5 h-5 object-contain" />
+                      ) : null}
+                    </div>
                     <span className="font-medium text-[#E8ECF4]">{t.name}</span>
                   </Link>
                 </td>

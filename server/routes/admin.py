@@ -79,14 +79,15 @@ async def create_team(request: Request):
     name = body.get("name", "")
     color = body.get("color", "#333333")
     car_image = body.get("car_image", "")
+    logo_url = body.get("logo_url", "")
     sort_order = body.get("sort_order", 0)
 
     if not season_id or not name:
         return {"error": "season_id and name are required."}
 
     team_id = execute(
-        "INSERT INTO teams (season_id, name, color, car_image, sort_order) VALUES (?, ?, ?, ?, ?)",
-        (season_id, name, color, car_image, sort_order), fetch="none"
+        "INSERT INTO teams (season_id, name, color, car_image, logo_url, sort_order) VALUES (?, ?, ?, ?, ?, ?)",
+        (season_id, name, color, car_image, logo_url, sort_order), fetch="none"
     )
     return {"id": team_id, "name": name}
 
@@ -97,7 +98,7 @@ async def update_team(team_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("name", "color", "car_image", "sort_order"):
+    for field in ("name", "color", "car_image", "logo_url", "sort_order"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
