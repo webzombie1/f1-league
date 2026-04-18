@@ -56,9 +56,14 @@ async def update_season(season_id: int, request: Request):
 
     updates = []
     params = []
-    if name is not None:
-        updates.append("name = ?")
-        params.append(name)
+
+    for field in ("name", "season_start", "race_time"):
+        if field in body:
+            updates.append(f"{field} = ?")
+            params.append(body[field])
+    if "race_day" in body:
+        updates.append("race_day = ?")
+        params.append(int(body["race_day"]))
     if is_active is not None:
         updates.append("is_active = ?")
         params.append(1 if is_active else 0)
@@ -186,11 +191,15 @@ async def create_race(request: Request):
     hero_subtitle = body.get("hero_subtitle", "")
     track_image = body.get("track_image", "")
 
-    race_id = execute(
-        "INSERT INTO races (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle, track_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle, track_image), fetch="none"
-    )
-    return {"id": race_id, "track_name": track_name}
+    try:
+        race_id = execute(
+            "INSERT INTO races (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle, track_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (season_id, round_number, track_name, country, date, time, hero_image, hero_headline, hero_subtitle, track_image), fetch="none"
+        )
+        return {"id": race_id, "track_name": track_name}
+    except Exception as e:
+        logger.error("Failed to create race: %s", e)
+        return {"error": f"Failed to create race: {str(e)}"}
 
 
 @router.put("/races/{race_id}")
@@ -215,6 +224,28 @@ async def update_race(race_id: int, request: Request):
 async def delete_race(race_id: int):
     execute("DELETE FROM races WHERE id = ?", (race_id,), fetch="none")
     return {"status": "deleted"}
+
+
+@router.put("/races/bulk-update")
+async def bulk_update_races(request: Request):
+    """Update multiple races at once (for reorder/date recalculation)."""
+    body = await request.json()
+    updates = body.get("updates", [])
+
+    conn = get_conn()
+    for u in updates:
+        fields = []
+        params = []
+        for field in ("round_number", "date", "time", "status"):
+            if field in u:
+                fields.append(f"{field} = ?")
+                params.append(u[field])
+        if fields:
+            params.append(u["id"])
+            conn.execute(f"UPDATE races SET {', '.join(fields)} WHERE id = ?", tuple(params))
+    conn.commit()
+    conn.close()
+    return {"status": "updated", "count": len(updates)}
 
 
 # ─── Race Results ───────────────────────────────────────────────────
@@ -344,6 +375,40 @@ async def clear_results(race_id: int):
     conn.commit()
     conn.close()
     return {"status": "cleared"}
+
+
+# ─── Off Weeks ──────────────────────────────────────────────────────
+
+@router.get("/off-weeks")
+async def list_off_weeks(season_id: int):
+    """List off weeks — also available without auth for schedule display."""
+    return execute(
+        "SELECT * FROM off_weeks WHERE season_id = ? ORDER BY date",
+        (season_id,)
+    )
+
+
+@router.post("/off-weeks")
+async def create_off_week(request: Request):
+    body = await request.json()
+    season_id = body.get("season_id")
+    date = body.get("date", "")
+    reason = body.get("reason", "")
+
+    if not season_id or not date:
+        return {"error": "season_id and date are required."}
+
+    off_id = execute(
+        "INSERT INTO off_weeks (season_id, date, reason) VALUES (?, ?, ?)",
+        (season_id, date, reason), fetch="none"
+    )
+    return {"id": off_id, "date": date, "reason": reason}
+
+
+@router.delete("/off-weeks/{off_id}")
+async def delete_off_week(off_id: int):
+    execute("DELETE FROM off_weeks WHERE id = ?", (off_id,), fetch="none")
+    return {"status": "deleted"}
 
 
 # ─── Points Config ──────────────────────────────────────────────────

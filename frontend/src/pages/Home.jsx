@@ -388,7 +388,8 @@ export default function Home() {
                     </p>
                     {nextRace.date && (
                       <p className="text-sm text-[#8892A8] mt-1">
-                        {nextRace.date}{nextRace.time ? ` at ${nextRace.time}` : ''}
+                        {new Date(nextRace.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()}
+                        {nextRace.time ? ` · ${(() => { const [h,m] = nextRace.time.split(':'); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}` })()}` : ''}
                       </p>
                     )}
                   </div>

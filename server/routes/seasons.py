@@ -16,3 +16,11 @@ async def get_active_season():
     if not season:
         return {"detail": "No active season."}
     return season
+
+
+@router.get("/off-weeks")
+async def list_off_weeks(season_id: int):
+    return execute(
+        "SELECT * FROM off_weeks WHERE season_id = ? ORDER BY date",
+        (season_id,)
+    )

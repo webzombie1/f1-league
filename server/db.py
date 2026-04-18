@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS seasons (
     name        TEXT NOT NULL,
     year        INTEGER NOT NULL,
     is_active   INTEGER DEFAULT 1,
+    season_start TEXT DEFAULT '',
+    race_day    INTEGER DEFAULT 3,
+    race_time   TEXT DEFAULT '20:00',
     created_at  TEXT DEFAULT (datetime('now'))
 );
 
@@ -86,6 +89,14 @@ CREATE TABLE IF NOT EXISTS race_results (
     UNIQUE(race_id, driver_id)
 );
 
+CREATE TABLE IF NOT EXISTS off_weeks (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    season_id   INTEGER NOT NULL,
+    date        TEXT NOT NULL,
+    reason      TEXT DEFAULT '',
+    FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS articles (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     race_id         INTEGER,
@@ -114,10 +125,11 @@ CREATE TABLE IF NOT EXISTS tyre_stints (
 def get_conn() -> sqlite3.Connection:
     """Get a database connection with row factory enabled."""
     os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True)
-    conn = sqlite3.connect(DATABASE_PATH)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=5000")
     return conn
 
 
@@ -135,6 +147,9 @@ def init_db():
         ("teams", "car_image", "TEXT DEFAULT ''"),
         ("teams", "logo_url", "TEXT DEFAULT ''"),
         ("drivers", "photo_url", "TEXT DEFAULT ''"),
+        ("seasons", "season_start", "TEXT DEFAULT ''"),
+        ("seasons", "race_day", "INTEGER DEFAULT 3"),
+        ("seasons", "race_time", "TEXT DEFAULT '20:00'"),
     ]
     for table, column, col_type in migrations:
         try:
