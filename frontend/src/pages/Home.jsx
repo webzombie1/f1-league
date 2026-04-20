@@ -148,7 +148,10 @@ export default function Home() {
 
   const nextRace = races.find(r => r.status === 'upcoming')
   const lastRace = lastRaceData || [...races].reverse().find(r => r.status === 'completed')
-  const heroImage = lastRace?.hero_image || nextRace?.hero_image || DEFAULT_HERO
+  // Use featured article data for hero if race doesn't have its own
+  const heroHeadline = lastRace?.hero_headline || latestArticle?.headline || ''
+  const heroSubtitle = lastRace?.hero_subtitle || latestArticle?.subtitle || ''
+  const heroImage = lastRace?.hero_image || latestArticle?.hero_image || nextRace?.hero_image || DEFAULT_HERO
   const heroRace = lastRace || nextRace
   const results = lastRaceData?.results || []
 
@@ -167,14 +170,14 @@ export default function Home() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#7ED321] mb-3">
             {lastRace ? `Round ${lastRace.round_number} · ${lastRace.country}` : 'Up Next'}
           </p>
-          {lastRace && lastRace.hero_headline ? (
+          {lastRace && heroHeadline ? (
             <>
               <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight max-w-3xl">
-                {lastRace.hero_headline}
+                {heroHeadline}
               </h1>
-              {lastRace.hero_subtitle && (
+              {heroSubtitle && (
                 <p className="text-lg text-[#8892A8] mt-3 max-w-2xl leading-relaxed">
-                  {lastRace.hero_subtitle}
+                  {heroSubtitle}
                 </p>
               )}
               <Link
