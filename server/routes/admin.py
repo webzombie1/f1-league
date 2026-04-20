@@ -2,7 +2,9 @@
 
 import json
 import logging
-from fastapi import APIRouter, Request
+import os
+import shutil
+from fastapi import APIRouter, Request, UploadFile, File
 from server.db import execute, get_conn
 from server.config import GEMINI_API_KEY
 
@@ -139,10 +141,14 @@ async def create_driver(request: Request):
         abbreviation = name[:3].upper()
 
     photo_url = body.get("photo_url", "")
+    ea_tag = body.get("ea_tag", "")
+    platform = body.get("platform", "")
+    discord_name = body.get("discord_name", "")
+    discord_url = body.get("discord_url", "")
 
     driver_id = execute(
-        "INSERT INTO drivers (season_id, team_id, name, abbreviation, number, photo_url) VALUES (?, ?, ?, ?, ?, ?)",
-        (season_id, team_id, name, abbreviation, number, photo_url), fetch="none"
+        "INSERT INTO drivers (season_id, team_id, name, abbreviation, number, photo_url, ea_tag, platform, discord_name, discord_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (season_id, team_id, name, abbreviation, number, photo_url, ea_tag, platform, discord_name, discord_url), fetch="none"
     )
     return {"id": driver_id, "name": name}
 
@@ -153,7 +159,7 @@ async def update_driver(driver_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url"):
+    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url", "photo_standing", "ea_tag", "platform", "discord_name", "discord_url"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -169,6 +175,32 @@ async def update_driver(driver_id: int, request: Request):
 async def delete_driver(driver_id: int):
     execute("DELETE FROM drivers WHERE id = ?", (driver_id,), fetch="none")
     return {"status": "deleted"}
+
+
+@router.post("/drivers/{driver_id}/photo")
+async def upload_driver_photo(driver_id: int, file: UploadFile = File(...), request: Request = None):
+    """Upload a driver photo. Use ?type=standing for full-body, default is thumbnail."""
+    photo_type = "thumbnail"
+    if request and "standing" in (request.query_params.get("type", "")):
+        photo_type = "standing"
+
+    upload_dir = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public", "drivers")
+    if os.path.isdir("/data"):
+        upload_dir = "/data/drivers"
+    os.makedirs(upload_dir, exist_ok=True)
+
+    ext = os.path.splitext(file.filename)[1] or ".png"
+    filename = f"driver_{driver_id}_{photo_type}{ext}"
+    filepath = os.path.join(upload_dir, filename)
+
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    photo_url = f"/drivers/{filename}"
+    field = "photo_standing" if photo_type == "standing" else "photo_url"
+    execute(f"UPDATE drivers SET {field} = ? WHERE id = ?", (photo_url, driver_id), fetch="none")
+
+    return {"status": "uploaded", "photo_url": photo_url, "type": photo_type}
 
 
 # ─── Races ──────────────────────────────────────────────────────────

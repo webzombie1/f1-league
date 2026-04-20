@@ -18,7 +18,7 @@ A full-stack web app for tracking an F1 25 esports league with live UDP telemetr
 - **Schedule Management** — Searchable F1 25 track picker with GP name/city/country, auto-dating based on season settings (race day, time, start date), drag-to-reorder with automatic date recalculation, inline date editing, bulk operations
 - **Season Settings** — Configurable race day, time, and start date saved per season. Off weeks/holidays that the schedule respects when calculating dates. Push this week's race button for quick delays
 - **Teams** — Team colors, car images, and official F1 logos
-- **Drivers** — Full names, numbers, abbreviations, team assignments, driver photos
+- **Drivers** — Full names, numbers, abbreviations, team assignments, EA tags, platform (Steam/PlayStation/Xbox/AI), Discord name/URL, photo uploads (thumbnail + standing), expandable inline editing
 - **Results** — View/edit race results, override points, clear and re-capture
 - **Articles** — Write or auto-generate race recaps using Gemini AI, with headline, subtitle, body, and hero image
 - **Points** — Configurable points system (default: standard F1)

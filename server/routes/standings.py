@@ -21,6 +21,7 @@ async def driver_standings(season_id: int = Query(None)):
             d.abbreviation,
             d.number,
             d.photo_url,
+            d.photo_standing,
             t.name AS team_name,
             t.color AS team_color,
             t.logo_url AS team_logo,

@@ -469,9 +469,9 @@ export default function Home() {
 
                   {/* Driver photo — bottom right */}
                   <div className="absolute bottom-0 right-0 w-48 h-full">
-                    {d.photo_url ? (
+                    {(d.photo_standing || d.photo_url) ? (
                       <img
-                        src={d.photo_url}
+                        src={d.photo_standing || d.photo_url}
                         alt={d.name}
                         className="w-full h-full object-contain object-bottom drop-shadow-2xl"
                       />
