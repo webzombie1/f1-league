@@ -10,9 +10,7 @@ function getYoutubeId(url) {
   return match ? match[1] : null
 }
 
-function StandingsSection({ topDrivers }) {
-  const [tab, setTab] = useState('drivers')
-
+function StandingsSection({ topDrivers, tab, setTab }) {
   const constructors = Object.values(
     topDrivers.reduce((acc, d) => {
       const key = d.team_name || 'Unknown'
@@ -24,31 +22,6 @@ function StandingsSection({ topDrivers }) {
 
   return (
     <div>
-      {/* Tab switcher */}
-      <div className="flex gap-6 border-b border-[#2A3458] mb-4">
-        <button
-          onClick={() => setTab('drivers')}
-          className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors ${
-            tab === 'drivers'
-              ? 'text-[#E8ECF4] border-b-2 border-[#7ED321]'
-              : 'text-[#555F78] hover:text-[#8892A8]'
-          }`}
-        >
-          Drivers
-        </button>
-        <button
-          onClick={() => setTab('teams')}
-          className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors ${
-            tab === 'teams'
-              ? 'text-[#E8ECF4] border-b-2 border-[#7ED321]'
-              : 'text-[#555F78] hover:text-[#8892A8]'
-          }`}
-        >
-          Teams
-        </button>
-      </div>
-
-      {/* Standings list */}
       {tab === 'drivers' ? (
         <div className="space-y-0">
           {topDrivers.slice(3).map((d, i) => (
@@ -112,6 +85,7 @@ export default function Home() {
   const [latestArticle, setLatestArticle] = useState(null)
   const [highlights, setHighlights] = useState([])
   const [playingVideo, setPlayingVideo] = useState(null)
+  const [standingsTab, setStandingsTab] = useState('drivers')
   const [loading, setLoading] = useState(true)
   const scrollRef = useRef(null)
 
@@ -130,7 +104,7 @@ export default function Home() {
     ]).then(async ([s, r, d, articles]) => {
       setSeason(s)
       setRaces(r)
-      setTopDrivers(d.slice(0, 5))
+      setTopDrivers(d.slice(0, 10))
 
       // Latest article
       if (articles.length > 0) {
@@ -441,8 +415,32 @@ export default function Home() {
           </h2>
         </div>
 
+        {/* Drivers / Teams tab switcher */}
+        <div className="flex gap-6 border-b border-[#2A3458]">
+          <button
+            onClick={() => setStandingsTab('drivers')}
+            className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+              standingsTab === 'drivers'
+                ? 'text-[#E8ECF4] border-b-2 border-[#7ED321]'
+                : 'text-[#555F78] hover:text-[#8892A8]'
+            }`}
+          >
+            Drivers
+          </button>
+          <button
+            onClick={() => setStandingsTab('teams')}
+            className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+              standingsTab === 'teams'
+                ? 'text-[#E8ECF4] border-b-2 border-[#7ED321]'
+                : 'text-[#555F78] hover:text-[#8892A8]'
+            }`}
+          >
+            Teams
+          </button>
+        </div>
+
         {/* Podium Cards — Top 3 */}
-        {topDrivers.length >= 3 && (
+        {topDrivers.length >= 3 && standingsTab === 'drivers' && (
           <div className="grid grid-cols-3 gap-4">
             {[topDrivers[0], topDrivers[1], topDrivers[2]].map((d, i) => {
               const pos = i + 1
@@ -513,7 +511,7 @@ export default function Home() {
         )}
 
         {/* Drivers / Teams tab switcher + standings list */}
-        <StandingsSection topDrivers={topDrivers} />
+        <StandingsSection topDrivers={topDrivers} tab={standingsTab} setTab={setStandingsTab} />
       </div>
 
       {/* Video player modal */}

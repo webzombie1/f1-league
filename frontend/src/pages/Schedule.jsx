@@ -2,6 +2,19 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { get } from '../api'
 
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase()
+}
+
+function formatTime(timeStr) {
+  if (!timeStr) return ''
+  const [h, m] = timeStr.split(':')
+  const hr = parseInt(h)
+  return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`
+}
+
 export default function Schedule() {
   const [races, setRaces] = useState([])
   const [loading, setLoading] = useState(true)
@@ -21,49 +34,82 @@ export default function Schedule() {
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <h1 className="text-2xl font-bold text-[#E8ECF4]">Season Schedule</h1>
 
-      <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {races.map(race => (
           <div
             key={race.id}
-            className={`bg-[#1E2642] border rounded-xl p-5 transition-colors ${
-              race.status === 'completed' ? 'border-[#2A3458]' : 'border-[#7ED321]/30'
+            className={`rounded-xl overflow-hidden transition-colors flex flex-col ${
+              race.status === 'completed'
+                ? 'bg-[#7ED321] border border-[#8EE835]'
+                : 'bg-[#141A2E] border border-[#7ED321]/30 hover:border-[#3A4468]'
             }`}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-[#8892A8] w-12">R{race.round_number}</span>
-                <div>
-                  <p className="font-medium text-[#E8ECF4]">{race.track_name}</p>
-                  <p className="text-sm text-[#8892A8] mt-0.5">
-                    {race.country}
-                    {race.date ? ` — ${race.date}` : ''}
-                    {race.time ? ` at ${race.time}` : ''}
-                  </p>
-                </div>
+            {/* Track image */}
+            {race.track_image ? (
+              <div className="w-full h-36 overflow-hidden relative">
+                <img
+                  src={race.track_image}
+                  alt={race.track_name}
+                  className="w-full h-full object-cover"
+                />
+                {race.status === 'completed' && (
+                  <div className="absolute top-2 right-2">
+                    <span className="text-xs bg-[#0D1117]/60 text-white px-2 py-0.5 rounded font-medium backdrop-blur-sm">
+                      ✓ Completed
+                    </span>
+                  </div>
+                )}
+                {race.status === 'upcoming' && (
+                  <div className="absolute top-2 right-2">
+                    <span className="text-xs bg-[#7ED321]/20 text-[#7ED321] px-2 py-0.5 rounded font-medium backdrop-blur-sm">
+                      Upcoming
+                    </span>
+                  </div>
+                )}
               </div>
-              <div>
-                {race.status === 'completed' ? (
-                  <Link
-                    to={`/race/${race.id}`}
-                    className="text-sm text-[#7ED321] hover:underline"
-                  >
-                    Results →
-                  </Link>
-                ) : race.status === 'cancelled' ? (
-                  <span className="text-sm text-[#555F78]">Cancelled</span>
-                ) : (
-                  <span className="text-xs bg-[#7ED321]/15 text-[#7ED321] px-2 py-1 rounded-md font-medium">
-                    Upcoming
-                  </span>
+            ) : (
+              <div className="w-full h-36 bg-[#1E2642] flex items-center justify-center">
+                <span className="text-[#555F78] text-xs uppercase tracking-wider">Round {race.round_number}</span>
+              </div>
+            )}
+
+            {/* Race info */}
+            <div className="p-4 flex gap-3 flex-1">
+              <div className="text-center shrink-0 w-12">
+                <span className={`text-[8px] uppercase tracking-wider block leading-none mb-1 ${race.status === 'completed' ? 'text-[#0D1117]/60' : 'text-[#8892A8]'}`}>Round</span>
+                <span className={`text-xl font-black leading-none ${race.status === 'completed' ? 'text-[#0D1117]' : 'text-[#7ED321]'}`}>{race.round_number}</span>
+              </div>
+              <div className="-mt-0.5 flex-1">
+                <h3 className={`font-bold uppercase text-sm leading-tight ${race.status === 'completed' ? 'text-[#0D1117]' : 'text-[#E8ECF4]'}`}>
+                  {race.track_name}
+                </h3>
+                <p className={`text-xs mt-0.5 ${race.status === 'completed' ? 'text-[#0D1117]/70' : 'text-[#8892A8]'}`}>
+                  {race.country}
+                </p>
+                {race.status !== 'completed' && race.date && (
+                  <p className="text-xs text-[#8892A8] mt-1">
+                    {formatDate(race.date)}
+                    {race.time ? ` · ${formatTime(race.time)}` : ''}
+                  </p>
                 )}
               </div>
             </div>
+            {race.status === 'completed' && (
+              <div className="px-4 pb-3">
+                <Link
+                  to={`/race/${race.id}`}
+                  className="text-xs text-[#0D1117] hover:underline uppercase tracking-wider font-bold"
+                >
+                  Full Results →
+                </Link>
+              </div>
+            )}
           </div>
         ))}
-        {races.length === 0 && (
-          <p className="text-center text-[#555F78] text-sm py-8">No races scheduled yet.</p>
-        )}
       </div>
+      {races.length === 0 && (
+        <p className="text-center text-[#555F78] text-sm py-8">No races scheduled yet.</p>
+      )}
     </div>
   )
 }
