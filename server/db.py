@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS articles (
     body            TEXT DEFAULT '',
     hero_image      TEXT DEFAULT '',
     published       INTEGER DEFAULT 1,
+    featured        INTEGER DEFAULT 0,
     created_at      TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE SET NULL,
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
@@ -153,6 +154,7 @@ def init_db():
         ("teams", "car_image", "TEXT DEFAULT ''"),
         ("teams", "logo_url", "TEXT DEFAULT ''"),
         ("drivers", "photo_url", "TEXT DEFAULT ''"),
+        ("articles", "featured", "INTEGER DEFAULT 0"),
         ("race_results", "quali_time_ms", "INTEGER"),
         ("drivers", "photo_standing", "TEXT DEFAULT ''"),
         ("drivers", "ea_tag", "TEXT DEFAULT ''"),

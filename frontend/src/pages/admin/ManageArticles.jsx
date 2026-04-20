@@ -168,12 +168,26 @@ export default function ManageArticles() {
       {/* Article list */}
       <div className="space-y-2">
         {articles.map(a => (
-          <div key={a.id} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-4 flex items-center justify-between">
-            <div>
+          <div key={a.id} className={`bg-[#1E2642] border rounded-xl p-4 flex items-center justify-between ${a.featured ? 'border-[#7ED321]/50' : 'border-[#2A3458]'}`}>
+            <div className="flex items-center gap-2">
+              {a.featured && <span className="text-[#7ED321] text-xs font-bold uppercase">Featured</span>}
               <span className="font-medium text-[#E8ECF4]">{a.headline}</span>
               {a.track_name && <span className="text-[#8892A8] text-sm ml-2">— {a.track_name}</span>}
             </div>
             <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  // Unfeature all others, feature this one
+                  for (const other of articles) {
+                    if (other.featured && other.id !== a.id) await put(`/admin/articles/${other.id}`, { featured: 0 })
+                  }
+                  await put(`/admin/articles/${a.id}`, { featured: a.featured ? 0 : 1 })
+                  loadArticles()
+                }}
+                className={`text-xs hover:underline ${a.featured ? 'text-amber-400' : 'text-[#8892A8]'}`}
+              >
+                {a.featured ? 'Unfeature' : 'Feature'}
+              </button>
               <button onClick={() => edit(a)} className="text-xs text-[#7ED321] hover:underline">Edit</button>
               <button onClick={() => remove(a.id)} className="text-xs text-red-400 hover:underline">Delete</button>
             </div>

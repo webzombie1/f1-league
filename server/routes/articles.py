@@ -18,7 +18,7 @@ async def list_articles(season_id: int = Query(None)):
         FROM articles a
         LEFT JOIN races r ON a.race_id = r.id
         WHERE a.season_id = ? AND a.published = 1
-        ORDER BY a.created_at DESC
+        ORDER BY a.featured DESC, a.created_at DESC
     """, (season_id,))
 
 

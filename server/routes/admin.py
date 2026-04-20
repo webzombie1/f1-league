@@ -510,7 +510,7 @@ async def update_article(article_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("headline", "subtitle", "body", "hero_image", "race_id", "published"):
+    for field in ("headline", "subtitle", "body", "hero_image", "race_id", "published", "featured"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
