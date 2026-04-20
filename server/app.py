@@ -79,9 +79,27 @@ if os.path.isdir(frontend_dist):
 
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
 
+    # Serve uploaded files from /data/ on Fly.io (drivers photos, etc.)
+    if os.path.isdir("/data"):
+        @app.get("/drivers/{filename:path}")
+        async def serve_uploaded_driver(filename: str):
+            data_path = os.path.join("/data/drivers", filename)
+            if os.path.isfile(data_path):
+                return FileResponse(data_path)
+            # Fall back to built-in static files
+            static_path = os.path.join(frontend_dist, "drivers", filename)
+            if os.path.isfile(static_path):
+                return FileResponse(static_path)
+            return FileResponse(os.path.join(frontend_dist, "index.html"))
+
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
         """Serve static files or fall back to index.html for SPA routing."""
+        # Check /data first for uploaded files (Fly.io)
+        if os.path.isdir("/data"):
+            data_path = os.path.join("/data", full_path)
+            if os.path.isfile(data_path):
+                return FileResponse(data_path)
         file_path = os.path.join(frontend_dist, full_path)
         if os.path.isfile(file_path):
             return FileResponse(file_path)
