@@ -52,23 +52,26 @@ export default function Layout() {
             rgba(255,255,255,0.02) 200px
           )`
         }} />
-        <div className="relative max-w-6xl mx-auto px-4 flex items-center justify-center h-14">
-          {/* Left nav */}
-          <nav className="flex items-center gap-1">
-            {LEFT_NAV.map(link => <NavItem key={link.to} {...link} />)}
-          </nav>
+        <div className="relative max-w-6xl mx-auto px-4 flex items-center h-14">
+          {/* F1 25 logo — left aligned */}
+          <img src="/logo_f12025.png" alt="F1 25" className="h-6 object-contain shrink-0 absolute left-4" />
 
-          {/* Center logo with trophy background */}
-          <NavLink to="/" className="mx-8 flex items-center gap-2 relative">
-            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl opacity-40 select-none pointer-events-none">🏆</span>
-            <span className="relative text-xl font-black tracking-tight text-[#7ED321]">GDR</span>
-            <span className="relative text-xl font-light tracking-tight text-[#E8ECF4]">LEAGUE</span>
-          </NavLink>
+          {/* Centered navigation */}
+          <div className="flex-1 flex items-center justify-center">
+            <nav className="flex items-center gap-1">
+              {LEFT_NAV.map(link => <NavItem key={link.to} {...link} />)}
+            </nav>
 
-          {/* Right nav */}
-          <nav className="flex items-center gap-1">
-            {RIGHT_NAV.map(link => <NavItem key={link.to} {...link} />)}
-          </nav>
+            <NavLink to="/" className="mx-8 flex items-center gap-2 relative">
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl opacity-40 select-none pointer-events-none">🏆</span>
+              <span className="relative text-xl font-black tracking-tight text-[#7ED321]">GDR</span>
+              <span className="relative text-xl font-light tracking-tight text-[#E8ECF4]">LEAGUE</span>
+            </NavLink>
+
+            <nav className="flex items-center gap-1">
+              {RIGHT_NAV.map(link => <NavItem key={link.to} {...link} />)}
+            </nav>
+          </div>
         </div>
       </header>
 

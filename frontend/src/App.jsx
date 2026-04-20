@@ -18,6 +18,7 @@ import ManageSchedule from './pages/admin/ManageSchedule'
 import ManageResults from './pages/admin/ManageResults'
 import ManagePoints from './pages/admin/ManagePoints'
 import ManageArticles from './pages/admin/ManageArticles'
+import ManageHighlights from './pages/admin/ManageHighlights'
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="results" element={<ManageResults />} />
         <Route path="points" element={<ManagePoints />} />
         <Route path="articles" element={<ManageArticles />} />
+        <Route path="highlights" element={<ManageHighlights />} />
       </Route>
     </Routes>
   )

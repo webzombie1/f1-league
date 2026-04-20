@@ -410,6 +410,38 @@ async def clear_results(race_id: int):
     return {"status": "cleared"}
 
 
+# ─── Highlights ─────────────────────────────────────────────────────
+
+@router.get("/highlights")
+async def list_highlights(race_id: int = None):
+    if race_id:
+        return execute("SELECT * FROM highlights WHERE race_id = ? ORDER BY sort_order", (race_id,))
+    return execute("SELECT h.*, r.track_name FROM highlights h LEFT JOIN races r ON h.race_id = r.id ORDER BY h.race_id DESC, h.sort_order")
+
+
+@router.post("/highlights")
+async def create_highlight(request: Request):
+    body = await request.json()
+    race_id = body.get("race_id")
+    title = body.get("title", "")
+    youtube_url = body.get("youtube_url", "")
+
+    if not race_id or not youtube_url:
+        return {"error": "race_id and youtube_url are required."}
+
+    highlight_id = execute(
+        "INSERT INTO highlights (race_id, title, youtube_url) VALUES (?, ?, ?)",
+        (race_id, title, youtube_url), fetch="none"
+    )
+    return {"id": highlight_id, "title": title}
+
+
+@router.delete("/highlights/{highlight_id}")
+async def delete_highlight(highlight_id: int):
+    execute("DELETE FROM highlights WHERE id = ?", (highlight_id,), fetch="none")
+    return {"status": "deleted"}
+
+
 # ─── Off Weeks ──────────────────────────────────────────────────────
 
 @router.get("/off-weeks")

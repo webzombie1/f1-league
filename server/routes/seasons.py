@@ -18,6 +18,14 @@ async def get_active_season():
     return season
 
 
+@router.get("/highlights")
+async def list_highlights(race_id: int):
+    return execute(
+        "SELECT * FROM highlights WHERE race_id = ? ORDER BY sort_order",
+        (race_id,)
+    )
+
+
 @router.get("/off-weeks")
 async def list_off_weeks(season_id: int):
     return execute(

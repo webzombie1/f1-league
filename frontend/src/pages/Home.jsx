@@ -4,6 +4,12 @@ import { get } from '../api'
 
 const DEFAULT_HERO = '/hero-australia.jpeg'
 
+function getYoutubeId(url) {
+  if (!url) return null
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/)
+  return match ? match[1] : null
+}
+
 function StandingsSection({ topDrivers }) {
   const [tab, setTab] = useState('drivers')
 
@@ -104,6 +110,8 @@ export default function Home() {
   const [topDrivers, setTopDrivers] = useState([])
   const [lastRaceData, setLastRaceData] = useState(null)
   const [latestArticle, setLatestArticle] = useState(null)
+  const [highlights, setHighlights] = useState([])
+  const [playingVideo, setPlayingVideo] = useState(null)
   const [loading, setLoading] = useState(true)
   const scrollRef = useRef(null)
 
@@ -129,12 +137,14 @@ export default function Home() {
         setLatestArticle(articles[0])
       }
 
-      // Fetch full results for the last completed race
+      // Fetch full results and highlights for the last completed race
       const lastCompleted = [...r].reverse().find(x => x.status === 'completed')
       if (lastCompleted) {
         try {
           const raceDetail = await get(`/races/${lastCompleted.id}`)
           setLastRaceData(raceDetail)
+          const hl = await get(`/highlights?race_id=${lastCompleted.id}`)
+          setHighlights(hl)
         } catch {}
       }
 
@@ -331,41 +341,51 @@ export default function Home() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-[#2A3458]">
               <h2 className="text-sm font-bold uppercase tracking-wider text-[#E8ECF4]">Latest Highlights</h2>
             </div>
-            <div className="grid grid-cols-2 gap-3 p-4">
-              {[
-                { title: 'Race Highlights — Australia', thumbnail: '/hero-australia.jpeg', url: '' },
-                { title: 'Ling\'s Dramatic Crash', thumbnail: '/hero-australia.jpeg', url: '' },
-              ].map((video, i) => (
-                <a
-                  key={i}
-                  href={video.url || '#'}
-                  target={video.url ? '_blank' : undefined}
-                  rel="noopener noreferrer"
-                  className="group block rounded-lg overflow-hidden bg-[#0D1117] border border-[#2A3458] hover:border-[#7ED321]/40 transition-colors"
-                >
-                  <div className="relative aspect-video bg-[#1E2642] overflow-hidden">
-                    <img
-                      src={video.thumbnail}
-                      alt=""
-                      className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-10 h-10 rounded-full bg-[#7ED321]/90 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <svg className="w-4 h-4 text-[#0D1117] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z"/>
-                        </svg>
+            {highlights.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 p-4">
+                {highlights.slice(0, 2).map((video) => {
+                  const ytId = getYoutubeId(video.youtube_url)
+                  return (
+                    <button
+                      key={video.id}
+                      onClick={() => setPlayingVideo(video)}
+                      className="group block rounded-lg overflow-hidden bg-[#0D1117] border border-[#2A3458] hover:border-[#7ED321]/40 transition-colors text-left cursor-pointer"
+                    >
+                      <div className="relative aspect-video bg-[#1E2642] overflow-hidden">
+                        {ytId && (
+                          <img
+                            src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+                            alt=""
+                            className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
+                          />
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-[#7ED321]/90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg className="w-4 h-4 text-[#0D1117] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <p className="px-3 py-2 text-xs font-medium text-[#E8ECF4] truncate">
-                    {video.title}
-                  </p>
-                </a>
-              ))}
-            </div>
-            <div className="px-5 pb-4">
-              <a href="#" className="text-xs text-[#7ED321] hover:underline uppercase tracking-wider">More Highlights →</a>
-            </div>
+                      <p className="px-3 py-2 text-xs font-medium text-[#E8ECF4] truncate">
+                        {video.title}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="p-6 text-center">
+                <p className="text-[#555F78] text-sm">No highlights yet.</p>
+              </div>
+            )}
+            {highlights.length > 2 && (
+              <div className="px-5 pb-4">
+                <button onClick={() => setPlayingVideo(highlights[2])} className="text-xs text-[#7ED321] hover:underline uppercase tracking-wider cursor-pointer">
+                  More Highlights →
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Next Race card */}
@@ -495,6 +515,26 @@ export default function Home() {
         {/* Drivers / Teams tab switcher + standings list */}
         <StandingsSection topDrivers={topDrivers} />
       </div>
+
+      {/* Video player modal */}
+      {playingVideo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80" onClick={() => setPlayingVideo(null)}>
+          <div className="w-full max-w-4xl mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-medium text-[#E8ECF4] truncate">{playingVideo.title}</h3>
+              <button onClick={() => setPlayingVideo(null)} className="text-[#8892A8] hover:text-white text-2xl leading-none cursor-pointer">×</button>
+            </div>
+            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+              <iframe
+                className="absolute inset-0 w-full h-full rounded-lg"
+                src={`https://www.youtube.com/embed/${getYoutubeId(playingVideo.youtube_url)}?autoplay=1`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

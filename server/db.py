@@ -103,6 +103,15 @@ CREATE TABLE IF NOT EXISTS off_weeks (
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS highlights (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    race_id     INTEGER NOT NULL,
+    title       TEXT NOT NULL,
+    youtube_url TEXT NOT NULL,
+    sort_order  INTEGER DEFAULT 0,
+    FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS articles (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     race_id         INTEGER,

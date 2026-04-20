@@ -10,6 +10,7 @@ const ADMIN_NAV = [
   { to: '/admin/results', label: 'Results' },
   { to: '/admin/points', label: 'Points' },
   { to: '/admin/articles', label: 'Articles' },
+  { to: '/admin/highlights', label: 'Highlights' },
 ]
 
 export default function AdminLayout() {
