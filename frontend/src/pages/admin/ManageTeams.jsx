@@ -65,7 +65,12 @@ export default function ManageTeams() {
           <div key={t.id} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-4 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: t.color }} />
+                <input
+                  type="color"
+                  defaultValue={t.color || '#333333'}
+                  onChange={e => put(`/admin/teams/${t.id}`, { color: e.target.value }).then(load)}
+                  className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
+                />
                 <span className="font-medium text-[#E8ECF4]">{t.name}</span>
                 <span className="text-[#8892A8] text-sm">({(t.drivers || []).length} driver{(t.drivers || []).length !== 1 ? 's' : ''})</span>
                 {t.car_image && (

@@ -342,13 +342,14 @@ async def submit_results(race_id: int, request: Request):
         result_id = conn.execute(
             """INSERT OR REPLACE INTO race_results
             (race_id, driver_id, driver_name_raw, position, grid_position,
-             laps_completed, status, status_reason, best_lap_time_ms,
+             laps_completed, status, status_reason, best_lap_time_ms, quali_time_ms,
              total_time_s, penalties_time_s, num_penalties, num_pit_stops,
              points_awarded, fastest_lap, gap_to_leader)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (race_id, driver_id, driver_name, position, r.get("grid_position"),
              r.get("laps_completed", 0), status, r.get("status_reason", ""),
-             r.get("best_lap_time_ms"), r.get("total_time_s"),
+             r.get("best_lap_time_ms"), r.get("quali_time_ms"),
+             r.get("total_time_s"),
              r.get("penalties_time_s", 0), r.get("num_penalties", 0),
              r.get("num_pit_stops", 0), points, 1 if is_fastest else 0,
              r.get("gap_to_leader", ""))
@@ -384,7 +385,7 @@ async def update_result(result_id: int, request: Request):
 
     for field in ("position", "grid_position", "laps_completed", "status", "status_reason",
                   "points_awarded", "fastest_lap", "gap_to_leader", "driver_id",
-                  "penalties_time_s", "num_penalties"):
+                  "penalties_time_s", "num_penalties", "best_lap_time_ms", "quali_time_ms"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
