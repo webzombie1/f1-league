@@ -489,13 +489,12 @@ export default function Home() {
                   </div>
 
                   {/* Driver photo — bottom right */}
-                  <div className="absolute -bottom-1 right-[25px] w-44 h-[110%] overflow-hidden">
+                  <div className="absolute -bottom-1 right-0 w-56 h-[125%] overflow-hidden">
                     {(d.photo_standing || d.photo_url) ? (
                       <img
                         src={d.photo_standing || d.photo_url}
                         alt={d.name}
-                        className="w-full h-full object-cover drop-shadow-2xl"
-                        style={{ objectPosition: 'center 0%' }}
+                        className="w-full h-full object-contain object-bottom drop-shadow-2xl"
                       />
                     ) : (
                       <div className="w-full h-full flex items-end justify-center opacity-15">
