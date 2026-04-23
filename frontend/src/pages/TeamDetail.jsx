@@ -16,11 +16,11 @@ export default function TeamDetail() {
   }, [teamId])
 
   if (loading) {
-    return <div className="flex justify-center py-20"><p className="text-[#8892A8] text-sm">Loading...</p></div>
+    return <div className="flex justify-center py-20"><p className="text-[#999999] text-sm">Loading...</p></div>
   }
 
   if (!team || team.detail) {
-    return <p className="text-center text-[#555F78] py-8">Team not found.</p>
+    return <p className="text-center text-[#777777] py-8">Team not found.</p>
   }
 
   return (
@@ -42,18 +42,18 @@ export default function TeamDetail() {
         <StatBadge label="Podiums" value={team.podiums} />
       </div>
 
-      <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5">
-        <h2 className="text-xs text-[#8892A8] uppercase tracking-wider mb-4">Drivers</h2>
+      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-5">
+        <h2 className="text-xs text-[#999999] uppercase tracking-wider mb-4">Drivers</h2>
         <div className="space-y-3">
           {(team.drivers || []).map(d => (
             <Link
               key={d.id}
               to={`/driver/${d.id}`}
-              className="flex items-center gap-3 hover:bg-[#253052] -mx-2 px-2 py-2 rounded-lg transition-colors"
+              className="flex items-center gap-3 hover:bg-[#1F1F1F] -mx-2 px-2 py-2 rounded-lg transition-colors"
             >
-              <span className="text-sm font-mono text-[#8892A8] w-8">#{d.number || '?'}</span>
+              <span className="text-sm font-mono text-[#999999] w-8">#{d.number || '?'}</span>
               <span className="font-medium text-[#E8ECF4]">{d.name}</span>
-              <span className="text-xs text-[#555F78]">{d.abbreviation}</span>
+              <span className="text-xs text-[#777777]">{d.abbreviation}</span>
             </Link>
           ))}
         </div>

@@ -27,7 +27,7 @@ export default function Schedule() {
   }, [])
 
   if (loading) {
-    return <div className="flex justify-center py-20"><p className="text-[#8892A8] text-sm">Loading...</p></div>
+    return <div className="flex justify-center py-20"><p className="text-[#999999] text-sm">Loading...</p></div>
   }
 
   return (
@@ -41,7 +41,7 @@ export default function Schedule() {
             className={`rounded-xl overflow-hidden transition-colors flex flex-col ${
               race.status === 'completed'
                 ? 'bg-[#7ED321] border border-[#8EE835]'
-                : 'bg-[#141A2E] border border-[#7ED321]/30 hover:border-[#3A4468]'
+                : 'bg-[#111111] border border-[#7ED321]/30 hover:border-[#383838]'
             }`}
           >
             {/* Track image */}
@@ -68,26 +68,26 @@ export default function Schedule() {
                 )}
               </div>
             ) : (
-              <div className="w-full h-36 bg-[#1E2642] flex items-center justify-center">
-                <span className="text-[#555F78] text-xs uppercase tracking-wider">Round {race.round_number}</span>
+              <div className="w-full h-36 bg-[#191919] flex items-center justify-center">
+                <span className="text-[#777777] text-xs uppercase tracking-wider">Round {race.round_number}</span>
               </div>
             )}
 
             {/* Race info */}
             <div className="p-4 flex gap-3 flex-1">
               <div className="text-center shrink-0 w-12">
-                <span className={`text-[8px] uppercase tracking-wider block leading-none mb-1 ${race.status === 'completed' ? 'text-[#0D1117]/60' : 'text-[#8892A8]'}`}>Round</span>
+                <span className={`text-[8px] uppercase tracking-wider block leading-none mb-1 ${race.status === 'completed' ? 'text-[#0D1117]/60' : 'text-[#999999]'}`}>Round</span>
                 <span className={`text-xl font-black leading-none ${race.status === 'completed' ? 'text-[#0D1117]' : 'text-[#7ED321]'}`}>{race.round_number}</span>
               </div>
               <div className="-mt-0.5 flex-1">
                 <h3 className={`font-bold uppercase text-sm leading-tight ${race.status === 'completed' ? 'text-[#0D1117]' : 'text-[#E8ECF4]'}`}>
                   {race.track_name}
                 </h3>
-                <p className={`text-xs mt-0.5 ${race.status === 'completed' ? 'text-[#0D1117]/70' : 'text-[#8892A8]'}`}>
+                <p className={`text-xs mt-0.5 ${race.status === 'completed' ? 'text-[#0D1117]/70' : 'text-[#999999]'}`}>
                   {race.country}
                 </p>
                 {race.status !== 'completed' && race.date && (
-                  <p className="text-xs text-[#8892A8] mt-1">
+                  <p className="text-xs text-[#999999] mt-1">
                     {formatDate(race.date)}
                     {race.time ? ` · ${formatTime(race.time)}` : ''}
                   </p>
@@ -108,7 +108,7 @@ export default function Schedule() {
         ))}
       </div>
       {races.length === 0 && (
-        <p className="text-center text-[#555F78] text-sm py-8">No races scheduled yet.</p>
+        <p className="text-center text-[#777777] text-sm py-8">No races scheduled yet.</p>
       )}
     </div>
   )

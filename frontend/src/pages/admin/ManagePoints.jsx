@@ -31,22 +31,22 @@ export default function ManagePoints() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Points Configuration</h1>
 
-      <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5">
+      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-5">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {DEFAULT_POSITIONS.map(pos => (
             <div key={pos}>
-              <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">
+              <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">
                 {pos === 0 ? 'Fastest Lap' : `P${pos}`}
               </label>
               <input type="number" value={points[pos] ?? ''}
                 onChange={e => update(pos, e.target.value)}
-                className="w-full bg-[#141A2E] border border-[#2A3458] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] focus:outline-none focus:border-[#7ED321]" />
+                className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] focus:outline-none focus:border-[#7ED321]" />
             </div>
           ))}
         </div>
 
         <div className="mt-4 flex items-center gap-3">
-          <button onClick={save} className="bg-[#7ED321] hover:bg-[#6BC11A] text-[#141A2E] font-semibold px-4 py-2 rounded-lg text-sm">Save Points</button>
+          <button onClick={save} className="bg-[#7ED321] hover:bg-[#6BC11A] text-[#111111] font-semibold px-4 py-2 rounded-lg text-sm">Save Points</button>
           {saved && <span className="text-[#7ED321] text-sm">Saved!</span>}
         </div>
       </div>

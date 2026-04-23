@@ -319,11 +319,11 @@ export default function ManageSchedule() {
     load()
   }
 
-  const inputCls = "w-full bg-[#141A2E] border border-[#2A3458] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] placeholder-[#555F78] focus:outline-none focus:border-[#7ED321]"
+  const inputCls = "w-full bg-[#111111] border border-[#1F1F1F] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] placeholder-[#777777] focus:outline-none focus:border-[#7ED321]"
   const btnBase = "cursor-pointer font-bold uppercase text-xs tracking-wider px-4 py-2 rounded transition-all inline-flex items-center justify-center h-8"
-  const btnPrimary = `${btnBase} bg-gradient-to-b from-[#7ED321] to-[#5BA318] border border-[#8EE835] text-[#0D1117] shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] hover:from-[#8EE835] hover:to-[#6BC11A] disabled:from-[#2A3458] disabled:to-[#1E2642] disabled:border-[#2A3458] disabled:text-[#555F78] disabled:shadow-none disabled:cursor-not-allowed`
+  const btnPrimary = `${btnBase} bg-gradient-to-b from-[#7ED321] to-[#5BA318] border border-[#8EE835] text-[#0D1117] shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] hover:from-[#8EE835] hover:to-[#6BC11A] disabled:from-[#1F1F1F] disabled:to-[#191919] disabled:border-[#1F1F1F] disabled:text-[#777777] disabled:shadow-none disabled:cursor-not-allowed`
   const btnDanger = `${btnBase} bg-gradient-to-b from-red-500 to-red-700 border border-red-400 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] hover:from-red-400 hover:to-red-600`
-  const btnSecondary = `${btnBase} bg-gradient-to-b from-[#2A3458] to-[#1E2642] border border-[#3A4468] text-[#8892A8] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:text-[#E8ECF4] hover:border-[#555F78]`
+  const btnSecondary = `${btnBase} bg-gradient-to-b from-[#1F1F1F] to-[#191919] border border-[#383838] text-[#999999] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] hover:text-[#E8ECF4] hover:border-[#777777]`
 
   const formatRaceDate = (dateStr) => {
     if (!dateStr) return 'No date'
@@ -337,8 +337,8 @@ export default function ManageSchedule() {
       {saving && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0D1117]/70 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-3 border-[#2A3458] border-t-[#7ED321] rounded-full animate-spin" />
-            <p className="text-sm text-[#8892A8]">Saving...</p>
+            <div className="w-10 h-10 border-3 border-[#1F1F1F] border-t-[#7ED321] rounded-full animate-spin" />
+            <p className="text-sm text-[#999999]">Saving...</p>
           </div>
         </div>
       )}
@@ -346,15 +346,15 @@ export default function ManageSchedule() {
       <h1 className="text-2xl font-bold">Manage Schedule</h1>
 
       {/* Season Schedule Settings — summary bar */}
-      <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl px-5 py-4">
+      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl px-5 py-4">
         <div className="flex items-center justify-between">
           {seasonStart ? (
-            <p className="text-sm text-[#8892A8]">
+            <p className="text-sm text-[#999999]">
               Races on <span className="text-[#E8ECF4] font-medium">{DAYS[raceDay]}s</span> at <span className="text-[#E8ECF4] font-medium">{raceTime}</span>, starting <span className="text-[#E8ECF4] font-medium">{seasonStart}</span>
               {settingsSaved && <span className="text-[#7ED321] ml-2">Saved!</span>}
             </p>
           ) : (
-            <p className="text-sm text-[#555F78]">No schedule settings configured yet.</p>
+            <p className="text-sm text-[#777777]">No schedule settings configured yet.</p>
           )}
           <div className="flex gap-3 items-center shrink-0">
             <button
@@ -408,9 +408,9 @@ export default function ManageSchedule() {
 
         {/* Off Weeks */}
         {(offWeeks.length > 0 || seasonStart) && (
-          <div className="mt-3 pt-3 border-t border-[#2A3458]">
+          <div className="mt-3 pt-3 border-t border-[#1F1F1F]">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#8892A8]">Weeks Off</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#999999]">Weeks Off</h3>
               <button
                 type="button"
                 onClick={() => setOffWeekOpen(true)}
@@ -428,14 +428,14 @@ export default function ManageSchedule() {
                   <div key={o.id} className="flex items-center justify-between text-sm">
                     <span className="text-[#E8ECF4]">
                       {o.date}
-                      {o.reason && <span className="text-[#555F78] ml-2">— {o.reason}</span>}
+                      {o.reason && <span className="text-[#777777] ml-2">— {o.reason}</span>}
                     </span>
                     <button onClick={() => removeOffWeek(o.id)} className="text-xs text-red-400 hover:underline">Remove</button>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-[#555F78]">No weeks off scheduled.</p>
+              <p className="text-xs text-[#777777]">No weeks off scheduled.</p>
             )}
           </div>
         )}
@@ -444,15 +444,15 @@ export default function ManageSchedule() {
       {/* Add Off Week Modal */}
       {offWeekOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setOffWeekOpen(false)}>
-          <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-[#E8ECF4] mb-4">Add Week Off</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Date</label>
+                <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Date</label>
                 <input type="date" value={offWeekDate} onChange={e => setOffWeekDate(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Reason (optional)</label>
+                <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Reason (optional)</label>
                 <input value={offWeekReason} onChange={e => setOffWeekReason(e.target.value)} placeholder="Holiday, vacation, etc." className={inputCls} />
               </div>
             </div>
@@ -468,7 +468,7 @@ export default function ManageSchedule() {
               <button
                 type="button"
                 onClick={() => setOffWeekOpen(false)}
-                className="text-sm text-[#8892A8] hover:text-[#E8ECF4] transition-colors"
+                className="text-sm text-[#999999] hover:text-[#E8ECF4] transition-colors"
               >
                 Cancel
               </button>
@@ -480,21 +480,21 @@ export default function ManageSchedule() {
       {/* Settings Modal */}
       {settingsOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setSettingsOpen(false)}>
-          <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <h2 className="text-lg font-bold text-[#E8ECF4] mb-4">Season Schedule Settings</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Season Start Date</label>
+                <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Season Start Date</label>
                 <input type="date" value={seasonStart} onChange={e => setSeasonStart(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Race Day</label>
+                <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Race Day</label>
                 <select value={raceDay} onChange={e => setRaceDay(parseInt(e.target.value))} className={inputCls}>
                   {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Race Time</label>
+                <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Race Time</label>
                 <input type="time" value={raceTime} onChange={e => setRaceTime(e.target.value)} className={inputCls} />
               </div>
             </div>
@@ -509,7 +509,7 @@ export default function ManageSchedule() {
               <button
                 type="button"
                 onClick={() => setSettingsOpen(false)}
-                className="text-sm text-[#8892A8] hover:text-[#E8ECF4] transition-colors"
+                className="text-sm text-[#999999] hover:text-[#E8ECF4] transition-colors"
               >
                 Cancel
               </button>
@@ -519,8 +519,8 @@ export default function ManageSchedule() {
       )}
 
       {/* Add Race */}
-      <form onSubmit={create} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5 space-y-3">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-[#8892A8] mb-3">Add Race</h2>
+      <form onSubmit={create} className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-5 space-y-3">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-[#999999] mb-3">Add Race</h2>
         <div className="flex gap-3">
           <div className="flex-1 relative">
             <div className="relative">
@@ -550,7 +550,7 @@ export default function ManageSchedule() {
               <button
                 type="button"
                 onClick={() => { setTrackSearch(''); setTrack(''); setCountry(''); setTrackOpen(false) }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#555F78] hover:text-[#E8ECF4] transition-colors"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#777777] hover:text-[#E8ECF4] transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -559,7 +559,7 @@ export default function ManageSchedule() {
             )}
             </div>
             {trackOpen && (
-              <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#1E2642] border border-[#2A3458] rounded-lg max-h-52 overflow-y-auto shadow-xl">
+              <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-[#191919] border border-[#1F1F1F] rounded-lg max-h-52 overflow-y-auto shadow-xl">
                 {filteredTracks.map((t, i) => (
                   <button
                     key={t.name}
@@ -567,15 +567,15 @@ export default function ManageSchedule() {
                     onClick={() => handleTrackSelect(t)}
                     onMouseEnter={() => setTrackHighlight(i)}
                     className={`w-full text-left px-3 py-2 transition-colors ${
-                      i === trackHighlight ? 'bg-[#253052]' : 'hover:bg-[#253052]/50'
+                      i === trackHighlight ? 'bg-[#1F1F1F]' : 'hover:bg-[#1F1F1F]/50'
                     }`}
                   >
                     <p className="text-sm font-medium text-[#E8ECF4]">{t.gp}</p>
-                    <p className="text-xs text-[#555F78]">{t.name} · {t.city}, {t.country}</p>
+                    <p className="text-xs text-[#777777]">{t.name} · {t.city}, {t.country}</p>
                   </button>
                 ))}
                 {filteredTracks.length === 0 && (
-                  <p className="px-3 py-2 text-sm text-[#555F78]">No tracks found</p>
+                  <p className="px-3 py-2 text-sm text-[#777777]">No tracks found</p>
                 )}
               </div>
             )}
@@ -585,13 +585,13 @@ export default function ManageSchedule() {
           </div>
         </div>
         {track && (
-          <p className="text-xs text-[#8892A8]">
+          <p className="text-xs text-[#999999]">
             {seasonStart ? (
               <>Will be scheduled for <span className="text-[#7ED321] font-medium">{DAYS[raceDay]}, {getNextRaceDate()} at {raceTime}</span> as</>
             ) : (
               <>Will be added as</>
             )} Round {races.length > 0 ? Math.max(...races.map(r => r.round_number)) + 1 : 1}
-            {!seasonStart && <span className="text-[#555F78]"> (set season start to auto-date)</span>}
+            {!seasonStart && <span className="text-[#777777]"> (set season start to auto-date)</span>}
           </p>
         )}
       </form>
@@ -607,24 +607,24 @@ export default function ManageSchedule() {
             onDragLeave={() => setDragOverIndex(null)}
             onDrop={e => { e.preventDefault(); handleDrop(dragIndex, i); setDragIndex(null); setDragOverIndex(null) }}
             onDragEnd={() => { setDragIndex(null); setDragOverIndex(null) }}
-            className={`bg-[#1E2642] border rounded-xl p-4 flex items-center justify-between cursor-grab active:cursor-grabbing transition-all ${
-              dragOverIndex === i ? 'border-[#7ED321] scale-[1.01]' : 'border-[#2A3458]'
+            className={`bg-[#191919] border rounded-xl p-4 flex items-center justify-between cursor-grab active:cursor-grabbing transition-all ${
+              dragOverIndex === i ? 'border-[#7ED321] scale-[1.01]' : 'border-[#1F1F1F]'
             } ${dragIndex === i ? 'opacity-50' : ''}`}
           >
             <div className="flex items-center gap-3">
               {/* Drag handle */}
-              <svg className="w-4 h-4 text-[#555F78] shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-[#777777] shrink-0" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 11h2v2H8v-2zm6 0h2v2h-2v-2zm-6 5h2v2H8v-2zm6 0h2v2h-2v-2z"/>
               </svg>
               <div className="flex items-center">
                 <div className="text-center mr-3 w-12 shrink-0">
-                  <span className="text-[8px] uppercase tracking-wider text-[#8892A8] block leading-none">Round</span>
+                  <span className="text-[8px] uppercase tracking-wider text-[#999999] block leading-none">Round</span>
                   <span className="text-xl font-black text-[#7ED321] leading-none">{i + 1}</span>
                 </div>
                 <div>
                   <span className="font-medium text-[#E8ECF4]">{r.track_name}</span>
-                  <span className="text-[#8892A8] text-sm ml-2">{r.country}</span>
-                  <p className="text-[10px] text-[#555F78] font-mono">Race ID: {r.id}</p>
+                  <span className="text-[#999999] text-sm ml-2">{r.country}</span>
+                  <p className="text-[10px] text-[#777777] font-mono">Race ID: {r.id}</p>
                 </div>
               </div>
             </div>
@@ -635,14 +635,14 @@ export default function ManageSchedule() {
                     type="date"
                     value={editingDateValue}
                     onChange={e => setEditingDateValue(e.target.value)}
-                    className="bg-[#141A2E] border border-[#7ED321] rounded px-2 py-0.5 text-xs text-[#E8ECF4] focus:outline-none"
+                    className="bg-[#111111] border border-[#7ED321] rounded px-2 py-0.5 text-xs text-[#E8ECF4] focus:outline-none"
                   />
                   <button onClick={() => setRaceDate(r.id, editingDateValue)} className={btnPrimary}>Save</button>
                   <button onClick={() => setEditingDateId(null)} className={btnSecondary}>Cancel</button>
                 </span>
               ) : (
                 <>
-                  <span className="text-[#8892A8] text-xs shrink-0">
+                  <span className="text-[#999999] text-xs shrink-0">
                     {formatRaceDate(r.date)}{r.time ? ` · ${(() => { const [h,m] = r.time.split(':'); const hr = parseInt(h); return `${hr > 12 ? hr-12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}` })()}` : ''}
                   </span>
                   <button

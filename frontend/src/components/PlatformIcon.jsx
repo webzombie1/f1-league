@@ -24,7 +24,7 @@ const icons = {
 export default function PlatformIcon({ platform, className = 'w-5 h-5' }) {
   if (!platform || !icons[platform]) return null
   return (
-    <span className={`inline-flex items-center justify-center text-[#8892A8] ${className}`} title={platform}>
+    <span className={`inline-flex items-center justify-center text-[#999999] ${className}`} title={platform}>
       {icons[platform]}
     </span>
   )

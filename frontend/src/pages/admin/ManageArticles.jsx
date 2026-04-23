@@ -95,17 +95,17 @@ export default function ManageArticles() {
     setHeroImage('')
   }
 
-  const inputCls = "w-full bg-[#141A2E] border border-[#2A3458] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] placeholder-[#555F78] focus:outline-none focus:border-[#7ED321]"
+  const inputCls = "w-full bg-[#111111] border border-[#1F1F1F] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] placeholder-[#777777] focus:outline-none focus:border-[#7ED321]"
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Manage Articles</h1>
 
-      <form onSubmit={save} className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5 space-y-3">
+      <form onSubmit={save} className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-5 space-y-3">
         {/* Race selector + Generate button */}
         <div className="flex gap-3 items-end">
           <div className="flex-1">
-            <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Race</label>
+            <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Race</label>
             <select value={raceId} onChange={e => setRaceId(e.target.value)} className={inputCls}>
               <option value="">Select a race...</option>
               {races.map(r => <option key={r.id} value={r.id}>R{r.round_number}: {r.track_name}</option>)}
@@ -115,7 +115,7 @@ export default function ManageArticles() {
             type="button"
             onClick={generate}
             disabled={!raceId || generating}
-            className="bg-purple-600 hover:bg-purple-500 disabled:bg-[#2A3458] disabled:text-[#555F78] text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors"
+            className="bg-purple-600 hover:bg-purple-500 disabled:bg-[#1F1F1F] disabled:text-[#777777] text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors"
           >
             {generating ? (
               <>
@@ -128,22 +128,22 @@ export default function ManageArticles() {
         </div>
 
         <div>
-          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Headline</label>
+          <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Headline</label>
           <input value={headline} onChange={e => setHeadline(e.target.value)} placeholder="Hoecker Takes P1 in Australia" className={inputCls} />
         </div>
 
         <div>
-          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Subtitle</label>
+          <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Subtitle</label>
           <input value={subtitle} onChange={e => setSubtitle(e.target.value)} placeholder="A one-line summary of the drama..." className={inputCls} />
         </div>
 
         <div>
-          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Hero Image URL</label>
+          <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Hero Image URL</label>
           <input value={heroImage} onChange={e => setHeroImage(e.target.value)} placeholder="/hero-australia.jpeg" className={inputCls} />
         </div>
 
         <div>
-          <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-1">Article Body</label>
+          <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Article Body</label>
           <textarea
             value={body}
             onChange={e => setBody(e.target.value)}
@@ -154,11 +154,11 @@ export default function ManageArticles() {
         </div>
 
         <div className="flex gap-3">
-          <button type="submit" className="bg-[#7ED321] hover:bg-[#6BC11A] text-[#141A2E] font-semibold px-4 py-2 rounded-lg text-sm">
+          <button type="submit" className="bg-[#7ED321] hover:bg-[#6BC11A] text-[#111111] font-semibold px-4 py-2 rounded-lg text-sm">
             {editing ? 'Update Article' : 'Publish Article'}
           </button>
           {editing && (
-            <button type="button" onClick={clearForm} className="text-sm text-[#8892A8] hover:text-[#E8ECF4]">
+            <button type="button" onClick={clearForm} className="text-sm text-[#999999] hover:text-[#E8ECF4]">
               Cancel
             </button>
           )}
@@ -168,11 +168,11 @@ export default function ManageArticles() {
       {/* Article list */}
       <div className="space-y-2">
         {articles.map(a => (
-          <div key={a.id} className={`bg-[#1E2642] border rounded-xl p-4 flex items-center justify-between ${a.featured ? 'border-[#7ED321]/50' : 'border-[#2A3458]'}`}>
+          <div key={a.id} className={`bg-[#191919] border rounded-xl p-4 flex items-center justify-between ${a.featured ? 'border-[#7ED321]/50' : 'border-[#1F1F1F]'}`}>
             <div className="flex items-center gap-2">
               {a.featured && <span className="text-[#7ED321] text-xs font-bold uppercase">Featured</span>}
               <span className="font-medium text-[#E8ECF4]">{a.headline}</span>
-              {a.track_name && <span className="text-[#8892A8] text-sm ml-2">— {a.track_name}</span>}
+              {a.track_name && <span className="text-[#999999] text-sm ml-2">— {a.track_name}</span>}
             </div>
             <div className="flex gap-3">
               <button
@@ -184,7 +184,7 @@ export default function ManageArticles() {
                   await put(`/admin/articles/${a.id}`, { featured: a.featured ? 0 : 1 })
                   loadArticles()
                 }}
-                className={`text-xs hover:underline ${a.featured ? 'text-amber-400' : 'text-[#8892A8]'}`}
+                className={`text-xs hover:underline ${a.featured ? 'text-amber-400' : 'text-[#999999]'}`}
               >
                 {a.featured ? 'Unfeature' : 'Feature'}
               </button>

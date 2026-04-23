@@ -234,6 +234,28 @@ async def create_race(request: Request):
         return {"error": f"Failed to create race: {str(e)}"}
 
 
+@router.put("/races/bulk-update")
+async def bulk_update_races(request: Request):
+    """Update multiple races at once (for reorder/date recalculation)."""
+    body = await request.json()
+    updates = body.get("updates", [])
+
+    conn = get_conn()
+    for u in updates:
+        fields = []
+        params = []
+        for field in ("round_number", "date", "time", "status"):
+            if field in u:
+                fields.append(f"{field} = ?")
+                params.append(u[field])
+        if fields:
+            params.append(u["id"])
+            conn.execute(f"UPDATE races SET {', '.join(fields)} WHERE id = ?", tuple(params))
+    conn.commit()
+    conn.close()
+    return {"status": "updated", "count": len(updates)}
+
+
 @router.put("/races/{race_id}")
 async def update_race(race_id: int, request: Request):
     body = await request.json()
@@ -257,27 +279,6 @@ async def delete_race(race_id: int):
     execute("DELETE FROM races WHERE id = ?", (race_id,), fetch="none")
     return {"status": "deleted"}
 
-
-@router.put("/races/bulk-update")
-async def bulk_update_races(request: Request):
-    """Update multiple races at once (for reorder/date recalculation)."""
-    body = await request.json()
-    updates = body.get("updates", [])
-
-    conn = get_conn()
-    for u in updates:
-        fields = []
-        params = []
-        for field in ("round_number", "date", "time", "status"):
-            if field in u:
-                fields.append(f"{field} = ?")
-                params.append(u[field])
-        if fields:
-            params.append(u["id"])
-            conn.execute(f"UPDATE races SET {', '.join(fields)} WHERE id = ?", tuple(params))
-    conn.commit()
-    conn.close()
-    return {"status": "updated", "count": len(updates)}
 
 
 # ─── Race Results ───────────────────────────────────────────────────

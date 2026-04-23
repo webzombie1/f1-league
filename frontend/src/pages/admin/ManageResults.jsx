@@ -12,10 +12,10 @@ export default function ManageResults() {
   const [manualMode, setManualMode] = useState(false)
   const [manualRows, setManualRows] = useState([])
 
-  const inputCls = "bg-[#141A2E] border border-[#2A3458] rounded px-2 py-1 text-sm text-[#E8ECF4] focus:outline-none focus:border-[#7ED321]"
+  const inputCls = "bg-[#111111] border border-[#1F1F1F] rounded px-2 py-1 text-sm text-[#E8ECF4] focus:outline-none focus:border-[#7ED321]"
   const btnPrimary = "cursor-pointer bg-gradient-to-b from-[#7ED321] to-[#5BA318] border border-[#8EE835] text-[#0D1117] font-bold uppercase text-xs tracking-wider px-4 py-2 rounded transition-all"
   const btnDanger = "cursor-pointer bg-gradient-to-b from-red-500 to-red-700 border border-red-400 text-white font-bold uppercase text-xs tracking-wider px-4 py-2 rounded transition-all"
-  const btnSecondary = "cursor-pointer bg-gradient-to-b from-[#2A3458] to-[#1E2642] border border-[#3A4468] text-[#8892A8] font-bold uppercase text-xs tracking-wider px-4 py-2 rounded hover:text-[#E8ECF4] hover:border-[#555F78] transition-all"
+  const btnSecondary = "cursor-pointer bg-gradient-to-b from-[#1F1F1F] to-[#191919] border border-[#383838] text-[#999999] font-bold uppercase text-xs tracking-wider px-4 py-2 rounded hover:text-[#E8ECF4] hover:border-[#777777] transition-all"
 
   useEffect(() => {
     get('/races').then(setRaces).catch(() => {})
@@ -114,8 +114,8 @@ export default function ManageResults() {
       {saving && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0D1117]/70 backdrop-blur-sm">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-3 border-[#2A3458] border-t-[#7ED321] rounded-full animate-spin" />
-            <p className="text-sm text-[#8892A8]">Saving...</p>
+            <div className="w-10 h-10 border-3 border-[#1F1F1F] border-t-[#7ED321] rounded-full animate-spin" />
+            <p className="text-sm text-[#999999]">Saving...</p>
           </div>
         </div>
       )}
@@ -123,12 +123,12 @@ export default function ManageResults() {
       <h1 className="text-2xl font-bold">Manage Results</h1>
 
       {/* Race selector */}
-      <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5">
-        <label className="block text-xs text-[#8892A8] uppercase tracking-wider mb-2">Select Race</label>
+      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-5">
+        <label className="block text-xs text-[#999999] uppercase tracking-wider mb-2">Select Race</label>
         <select
           value={selectedRace?.id || ''}
           onChange={e => e.target.value && loadResults(parseInt(e.target.value))}
-          className="w-full bg-[#141A2E] border border-[#2A3458] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] focus:outline-none focus:border-[#7ED321]"
+          className="w-full bg-[#111111] border border-[#1F1F1F] rounded-lg px-3 py-2 text-sm text-[#E8ECF4] focus:outline-none focus:border-[#7ED321]"
         >
           <option value="">Choose a race...</option>
           {races.map(r => (
@@ -160,10 +160,10 @@ export default function ManageResults() {
 
           {/* Manual entry mode */}
           {manualMode && (
-            <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl overflow-x-auto">
+            <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#2A3458] text-[#8892A8] text-xs uppercase tracking-wider">
+                  <tr className="border-b border-[#1F1F1F] text-[#999999] text-xs uppercase tracking-wider">
                     <th className="text-left py-3 px-3">Driver</th>
                     <th className="text-center py-3 px-2 w-16">Qual</th>
                     <th className="text-center py-3 px-2 w-24">Quali Time</th>
@@ -175,10 +175,10 @@ export default function ManageResults() {
                 </thead>
                 <tbody>
                   {manualRows.map((r, i) => (
-                    <tr key={i} className="border-b border-[#2A3458]/50">
+                    <tr key={i} className="border-b border-[#1F1F1F]/50">
                       <td className="py-2 px-3">
                         <span className="font-medium text-[#E8ECF4]">{r.driver_name}</span>
-                        <span className="text-[#555F78] text-xs ml-2">{r.team_name}</span>
+                        <span className="text-[#777777] text-xs ml-2">{r.team_name}</span>
                       </td>
                       <td className="py-2 px-2 text-center">
                         <input
@@ -258,10 +258,10 @@ export default function ManageResults() {
 
           {/* Existing results — edit mode */}
           {!manualMode && results.length > 0 && (
-            <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl overflow-x-auto">
+            <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#2A3458] text-[#8892A8] text-xs uppercase tracking-wider">
+                  <tr className="border-b border-[#1F1F1F] text-[#999999] text-xs uppercase tracking-wider">
                     <th className="text-center py-3 px-2 w-16">Pos</th>
                     <th className="text-left py-3 px-2">Driver</th>
                     <th className="text-center py-3 px-2 w-16">Grid</th>
@@ -274,7 +274,7 @@ export default function ManageResults() {
                 </thead>
                 <tbody>
                   {results.map(r => (
-                    <tr key={r.id} className="border-b border-[#2A3458]/50">
+                    <tr key={r.id} className="border-b border-[#1F1F1F]/50">
                       <td className="py-2 px-2 text-center">
                         <input
                           type="number"
@@ -355,8 +355,8 @@ export default function ManageResults() {
 
           {/* No results yet */}
           {!manualMode && results.length === 0 && (
-            <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-8 text-center">
-              <p className="text-[#555F78] mb-4">No results for this race yet.</p>
+            <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-8 text-center">
+              <p className="text-[#777777] mb-4">No results for this race yet.</p>
               <button onClick={startManualEntry} className={btnPrimary}>Enter Results Manually</button>
             </div>
           )}

@@ -15,11 +15,11 @@ export default function Article() {
   }, [articleId])
 
   if (loading) {
-    return <div className="flex justify-center py-20"><p className="text-[#8892A8] text-sm">Loading...</p></div>
+    return <div className="flex justify-center py-20"><p className="text-[#999999] text-sm">Loading...</p></div>
   }
 
   if (!article || article.detail) {
-    return <div className="max-w-4xl mx-auto px-4 py-12"><p className="text-center text-[#555F78] py-8">Article not found.</p></div>
+    return <div className="max-w-4xl mx-auto px-4 py-12"><p className="text-center text-[#777777] py-8">Article not found.</p></div>
   }
 
   return (
@@ -52,7 +52,7 @@ export default function Article() {
         </h1>
 
         {article.subtitle && (
-          <p className="text-lg text-[#8892A8] mt-3 leading-relaxed">
+          <p className="text-lg text-[#999999] mt-3 leading-relaxed">
             {article.subtitle}
           </p>
         )}
@@ -76,7 +76,7 @@ export default function Article() {
 
         {/* Link to race results */}
         {article.race_id && (
-          <div className="mt-8 pt-6 border-t border-[#2A3458]">
+          <div className="mt-8 pt-6 border-t border-[#1F1F1F]">
             <Link
               to={`/race/${article.race_id}`}
               className="text-sm text-[#7ED321] hover:underline uppercase tracking-wider"

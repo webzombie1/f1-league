@@ -24,11 +24,11 @@ export default function RaceResult() {
   }, [raceId])
 
   if (loading) {
-    return <div className="flex justify-center py-20"><p className="text-[#8892A8] text-sm">Loading...</p></div>
+    return <div className="flex justify-center py-20"><p className="text-[#999999] text-sm">Loading...</p></div>
   }
 
   if (!race || race.detail) {
-    return <p className="text-center text-[#555F78] py-8">Race not found.</p>
+    return <p className="text-center text-[#777777] py-8">Race not found.</p>
   }
 
   const results = race.results || []
@@ -40,15 +40,15 @@ export default function RaceResult() {
         <h1 className="text-2xl font-bold text-[#E8ECF4] mt-2">
           Round {race.round_number}: {race.track_name}
         </h1>
-        <p className="text-[#8892A8] text-sm mt-1">
+        <p className="text-[#999999] text-sm mt-1">
           {race.country}{race.date ? ` — ${race.date}` : ''}
         </p>
       </div>
 
-      <div className="bg-[#1E2642] border border-[#2A3458] rounded-xl overflow-x-auto">
+      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-[#2A3458] text-[#8892A8] text-xs uppercase tracking-wider">
+            <tr className="border-b border-[#1F1F1F] text-[#999999] text-xs uppercase tracking-wider">
               <th className="text-left py-3 px-4 w-12">Pos</th>
               <th className="text-left py-3 px-2">Driver</th>
               <th className="text-left py-3 px-2 hidden md:table-cell">Team</th>
@@ -64,11 +64,11 @@ export default function RaceResult() {
             {results.map((r) => (
               <tr
                 key={r.id}
-                className={`border-b border-[#2A3458]/50 hover:bg-[#253052] transition-colors ${
+                className={`border-b border-[#1F1F1F]/50 hover:bg-[#1F1F1F] transition-colors ${
                   r.fastest_lap ? 'bg-purple-500/10' : ''
                 }`}
               >
-                <td className="py-3 px-4 font-medium text-[#8892A8]">
+                <td className="py-3 px-4 font-medium text-[#999999]">
                   {r.status === 'finished' ? r.position : r.status?.toUpperCase()}
                 </td>
                 <td className="py-3 px-2">
@@ -83,17 +83,17 @@ export default function RaceResult() {
                     <span className="font-medium text-[#E8ECF4]">{r.driver_name || r.driver_name_raw}</span>
                   </Link>
                 </td>
-                <td className="py-3 px-2 text-[#8892A8] hidden md:table-cell">{r.team_name || '-'}</td>
-                <td className="py-3 px-2 text-center text-[#8892A8] hidden sm:table-cell">{r.grid_position || '-'}</td>
-                <td className="py-3 px-2 text-center text-[#8892A8]">
+                <td className="py-3 px-2 text-[#999999] hidden md:table-cell">{r.team_name || '-'}</td>
+                <td className="py-3 px-2 text-center text-[#999999] hidden sm:table-cell">{r.grid_position || '-'}</td>
+                <td className="py-3 px-2 text-center text-[#999999]">
                   {r.position === 1 ? '-' : r.gap_to_leader || '-'}
                 </td>
                 <td className="py-3 px-2 text-center hidden sm:table-cell">
-                  <span className={r.fastest_lap ? 'text-purple-400 font-medium' : 'text-[#8892A8]'}>
+                  <span className={r.fastest_lap ? 'text-purple-400 font-medium' : 'text-[#999999]'}>
                     {formatTime(r.best_lap_time_ms)}
                   </span>
                 </td>
-                <td className="py-3 px-2 text-center text-[#8892A8] hidden md:table-cell">{r.num_pit_stops}</td>
+                <td className="py-3 px-2 text-center text-[#999999] hidden md:table-cell">{r.num_pit_stops}</td>
                 <td className="py-3 px-2 hidden lg:table-cell">
                   <div className="flex gap-1">
                     {(r.tyre_stints || []).map((s, i) => (
@@ -109,7 +109,7 @@ export default function RaceResult() {
           </tbody>
         </table>
         {results.length === 0 && (
-          <p className="text-center text-[#555F78] text-sm py-8">No results yet.</p>
+          <p className="text-center text-[#777777] text-sm py-8">No results yet.</p>
         )}
       </div>
     </div>

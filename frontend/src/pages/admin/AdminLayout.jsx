@@ -27,17 +27,17 @@ export default function AdminLayout() {
   }, [navigate])
 
   if (authed === null) {
-    return <div className="min-h-screen bg-[#0D1117] flex items-center justify-center"><p className="text-[#8892A8] text-sm">Loading...</p></div>
+    return <div className="min-h-screen bg-[#0D1117] flex items-center justify-center"><p className="text-[#999999] text-sm">Loading...</p></div>
   }
 
   if (!authed) return null
 
   return (
     <div className="min-h-screen bg-[#0D1117] text-[#E8ECF4]">
-      <header className="border-b border-[#2A3458] bg-[#1A2240]/90 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b border-[#1F1F1F] bg-[#141414]/90 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <NavLink to="/" className="text-xl font-bold tracking-tight text-[#7ED321]">
-            GDR League <span className="text-[#555F78] text-sm font-normal">Admin</span>
+            GDR League <span className="text-[#777777] text-sm font-normal">Admin</span>
           </NavLink>
           <nav className="flex gap-1 flex-wrap">
             {ADMIN_NAV.map(link => (
@@ -48,7 +48,7 @@ export default function AdminLayout() {
                   `px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     isActive
                       ? 'bg-[#7ED321]/15 text-[#7ED321]'
-                      : 'text-[#8892A8] hover:text-[#E8ECF4] hover:bg-[#1E2642]'
+                      : 'text-[#999999] hover:text-[#E8ECF4] hover:bg-[#191919]'
                   }`
                 }
               >

@@ -14,7 +14,7 @@ export default function Teams() {
   }, [])
 
   if (loading) {
-    return <div className="flex justify-center py-20"><p className="text-[#8892A8] text-sm">Loading...</p></div>
+    return <div className="flex justify-center py-20"><p className="text-[#999999] text-sm">Loading...</p></div>
   }
 
   return (
@@ -26,7 +26,7 @@ export default function Teams() {
           <Link
             key={team.id}
             to={`/teams/${team.id}`}
-            className="bg-[#1E2642] border border-[#2A3458] rounded-xl p-5 hover:border-[#3A4468] transition-colors"
+            className="bg-[#191919] border border-[#1F1F1F] rounded-xl p-5 hover:border-[#383838] transition-colors"
           >
             <div
               className="h-1 w-12 rounded-full mb-3"
@@ -35,19 +35,19 @@ export default function Teams() {
             <h3 className="font-semibold text-[#E8ECF4]">{team.name}</h3>
             <div className="mt-2 space-y-1">
               {(team.drivers || []).map(d => (
-                <p key={d.id} className="text-sm text-[#8892A8]">
+                <p key={d.id} className="text-sm text-[#999999]">
                   #{d.number || '?'} {d.name}
                 </p>
               ))}
               {(!team.drivers || team.drivers.length === 0) && (
-                <p className="text-sm text-[#555F78] italic">No drivers assigned</p>
+                <p className="text-sm text-[#777777] italic">No drivers assigned</p>
               )}
             </div>
           </Link>
         ))}
       </div>
       {teams.length === 0 && (
-        <p className="text-center text-[#555F78] text-sm py-8">No teams yet.</p>
+        <p className="text-center text-[#777777] text-sm py-8">No teams yet.</p>
       )}
     </div>
   )
