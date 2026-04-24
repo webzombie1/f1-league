@@ -240,20 +240,32 @@ async def bulk_update_races(request: Request):
     body = await request.json()
     updates = body.get("updates", [])
 
-    conn = get_conn()
-    for u in updates:
-        fields = []
-        params = []
-        for field in ("round_number", "date", "time", "status"):
-            if field in u:
-                fields.append(f"{field} = ?")
-                params.append(u[field])
-        if fields:
-            params.append(u["id"])
-            conn.execute(f"UPDATE races SET {', '.join(fields)} WHERE id = ?", tuple(params))
-    conn.commit()
-    conn.close()
-    return {"status": "updated", "count": len(updates)}
+    try:
+        conn = get_conn()
+        # Defer unique constraints so swapping round numbers doesn't fail mid-transaction
+        conn.execute("PRAGMA defer_foreign_keys = ON")
+        # Temporarily set all round numbers to negative to avoid unique conflicts
+        race_ids = [u["id"] for u in updates if "round_number" in u]
+        if race_ids:
+            placeholders = ",".join("?" * len(race_ids))
+            conn.execute(f"UPDATE races SET round_number = -round_number WHERE id IN ({placeholders})", race_ids)
+        # Now apply the actual updates
+        for u in updates:
+            fields = []
+            params = []
+            for field in ("round_number", "date", "time", "status"):
+                if field in u:
+                    fields.append(f"{field} = ?")
+                    params.append(u[field])
+            if fields:
+                params.append(u["id"])
+                conn.execute(f"UPDATE races SET {', '.join(fields)} WHERE id = ?", tuple(params))
+        conn.commit()
+        conn.close()
+        return {"status": "updated", "count": len(updates)}
+    except Exception as e:
+        logger.error("Bulk update failed: %s", e, exc_info=True)
+        return {"error": f"Bulk update failed: {str(e)}"}
 
 
 @router.put("/races/{race_id}")
