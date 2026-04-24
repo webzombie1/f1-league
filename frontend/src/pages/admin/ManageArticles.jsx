@@ -13,6 +13,7 @@ export default function ManageArticles() {
   const [body, setBody] = useState('')
   const [heroImage, setHeroImage] = useState('')
   const [generating, setGenerating] = useState(false)
+  const [context, setContext] = useState('')
   const [editing, setEditing] = useState(null)
 
   useEffect(() => {
@@ -33,16 +34,21 @@ export default function ManageArticles() {
     if (!raceId) return
     setGenerating(true)
     try {
-      const result = await post('/admin/articles/generate', { race_id: parseInt(raceId) })
+      const result = await post('/admin/articles/generate', { race_id: parseInt(raceId), context })
       if (result.error) {
         alert(result.error)
       } else {
         setHeadline(result.headline || '')
         setSubtitle(result.subtitle || '')
         setBody(result.body || '')
-        // Pre-fill hero image from race
-        const race = races.find(r => r.id === parseInt(raceId))
-        if (race?.hero_image) setHeroImage(race.hero_image)
+        // Pre-fill hero image from race or generated
+        if (result.hero_image) {
+          setHeroImage(result.hero_image)
+        } else {
+          const race = races.find(r => r.id === parseInt(raceId))
+          if (race?.hero_image) setHeroImage(race.hero_image)
+          else if (race?.track_image) setHeroImage(race.track_image)
+        }
       }
     } catch (e) {
       alert('Generation failed: ' + e.message)
@@ -111,11 +117,23 @@ export default function ManageArticles() {
               {races.map(r => <option key={r.id} value={r.id}>R{r.round_number}: {r.track_name}</option>)}
             </select>
           </div>
+        </div>
+        <div>
+          <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Context / Notes for AI (optional)</label>
+          <textarea
+            value={context}
+            onChange={e => setContext(e.target.value)}
+            rows={3}
+            placeholder="e.g. DrigsSC had a huge battle with madone59 in the last 3 laps. Kellmen got a penalty for corner cutting. It was raining at the start..."
+            className={`${inputCls} resize-y`}
+          />
+        </div>
+        <div>
           <button
             type="button"
             onClick={generate}
             disabled={!raceId || generating}
-            className="bg-purple-600 hover:bg-purple-500 disabled:bg-[#1F1F1F] disabled:text-[#777777] text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors"
+            className="bg-purple-600 hover:bg-purple-500 disabled:bg-[#1F1F1F] disabled:text-[#777777] text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition-colors cursor-pointer"
           >
             {generating ? (
               <>

@@ -566,6 +566,7 @@ async def generate_article(request: Request):
     """Generate a comedic race recap article using Gemini."""
     body = await request.json()
     race_id = body.get("race_id")
+    user_context = body.get("context", "")
 
     if not race_id:
         return {"error": "race_id is required."}
@@ -608,7 +609,7 @@ Race: Round {race['round_number']} - {race['track_name']}, {race['country']}
 Results:
 {results_text}
 
-Guidelines:
+{f"Additional context from the league admin (use this to inform the story):{chr(10)}{user_context}{chr(10)}" if user_context else ""}Guidelines:
 - Write in a professional motorsport journalism style but with dry wit and humor
 - Include 2-3 fake driver quotes (in quotation marks) that are funny but plausible
 - The winner should get the most coverage
@@ -642,10 +643,23 @@ Return your response as JSON with these fields:
 
         article_data = json.loads(text)
 
+        # Auto-find a hero image: race hero > track image > winning team car
+        hero_image = race.get("hero_image") or race.get("track_image") or ""
+        if not hero_image and results:
+            # Use the winning driver's team car image
+            winner = results[0]
+            winner_driver = execute(
+                "SELECT t.car_image FROM drivers d LEFT JOIN teams t ON d.team_id = t.id WHERE d.id = ?",
+                (winner.get("driver_id"),), fetch="one"
+            )
+            if winner_driver and winner_driver.get("car_image"):
+                hero_image = winner_driver["car_image"]
+
         return {
             "headline": article_data.get("headline", ""),
             "subtitle": article_data.get("subtitle", ""),
             "body": article_data.get("body", ""),
+            "hero_image": hero_image,
         }
 
     except Exception as e:
