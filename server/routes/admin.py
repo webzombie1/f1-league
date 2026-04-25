@@ -145,10 +145,11 @@ async def create_driver(request: Request):
     platform = body.get("platform", "")
     discord_name = body.get("discord_name", "")
     discord_url = body.get("discord_url", "")
+    ai_substitute_id = body.get("ai_substitute_id")
 
     driver_id = execute(
-        "INSERT INTO drivers (season_id, team_id, name, abbreviation, number, photo_url, ea_tag, platform, discord_name, discord_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (season_id, team_id, name, abbreviation, number, photo_url, ea_tag, platform, discord_name, discord_url), fetch="none"
+        "INSERT INTO drivers (season_id, team_id, name, abbreviation, number, photo_url, ea_tag, platform, discord_name, discord_url, ai_substitute_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (season_id, team_id, name, abbreviation, number, photo_url, ea_tag, platform, discord_name, discord_url, ai_substitute_id), fetch="none"
     )
     return {"id": driver_id, "name": name}
 
@@ -159,7 +160,7 @@ async def update_driver(driver_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url", "photo_standing", "ea_tag", "platform", "discord_name", "discord_url"):
+    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url", "photo_standing", "ea_tag", "platform", "discord_name", "discord_url", "ai_substitute_id"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -315,6 +316,24 @@ async def submit_results(race_id: int, request: Request):
     for row in rows:
         points_config[row["position"]] = row["points"]
 
+    # Build AI substitute reverse map: {ai_driver_id: human_driver}
+    sub_rows = execute(
+        "SELECT id, name, ai_substitute_id FROM drivers WHERE season_id = ? AND ai_substitute_id IS NOT NULL",
+        (race["season_id"],)
+    )
+    # Map: ai_driver_id -> {human_id, human_name}
+    ai_to_human = {}
+    for s in sub_rows:
+        if s["ai_substitute_id"]:
+            ai_to_human[s["ai_substitute_id"]] = {"id": s["id"], "name": s["name"]}
+
+    # Also build reverse by name for AI drivers that are subs
+    ai_name_to_human = {}
+    for ai_id, human in ai_to_human.items():
+        ai_driver = execute("SELECT name FROM drivers WHERE id = ?", (ai_id,), fetch="one")
+        if ai_driver:
+            ai_name_to_human[ai_driver["name"].lower()] = human
+
     # Find the fastest lap holder
     fastest_lap_driver = None
     fastest_lap_time = None
@@ -338,6 +357,16 @@ async def submit_results(race_id: int, request: Request):
             (race["season_id"], driver_name), fetch="one"
         )
         driver_id = driver["id"] if driver else None
+
+        # Check if this driver is an AI substitute — remap to human driver
+        if driver_id and driver_id in ai_to_human:
+            human = ai_to_human[driver_id]
+            driver_id = human["id"]
+            driver_name = human["name"]
+        elif driver_name.lower() in ai_name_to_human:
+            human = ai_name_to_human[driver_name.lower()]
+            driver_id = human["id"]
+            driver_name = human["name"]
 
         if not driver_id:
             unmatched.append(driver_name)

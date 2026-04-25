@@ -23,6 +23,7 @@ export default function ManageDrivers() {
       name: d.name || '', abbreviation: d.abbreviation || '', number: d.number || '',
       team_id: d.team_id || '', ea_tag: d.ea_tag || '', platform: d.platform || '',
       discord_name: d.discord_name || '', discord_url: d.discord_url || '',
+      ai_substitute_id: d.ai_substitute_id || '',
     })
   }
 
@@ -31,6 +32,7 @@ export default function ManageDrivers() {
       ...editData,
       number: editData.number ? parseInt(editData.number) : null,
       team_id: editData.team_id ? parseInt(editData.team_id) : null,
+      ai_substitute_id: editData.ai_substitute_id ? parseInt(editData.ai_substitute_id) : null,
     })
     setEditingId(null)
     load()
@@ -163,6 +165,10 @@ export default function ManageDrivers() {
                 <span className="text-[#999999] text-sm">{d.abbreviation}</span>
                 <span className="text-[#777777] text-sm">— {d.team_name || 'No team'}</span>
                 {d.discord_name && <span className="text-[#777777] text-xs ml-2 font-mono">({d.discord_name})</span>}
+              {d.ai_substitute_id && (() => {
+                const sub = drivers.find(dr => dr.id === d.ai_substitute_id)
+                return sub ? <span className="text-[#999999] text-xs ml-2">→ AI: {sub.name}</span> : null
+              })()}
               </div>
               <svg className={`w-4 h-4 text-[#777777] transition-transform ${editingId === d.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -255,6 +261,17 @@ export default function ManageDrivers() {
                       {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                   </div>
+                  {editData.platform !== 'ai' && (
+                    <div className="flex-1">
+                      <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">AI Substitute</label>
+                      <select value={editData.ai_substitute_id} onChange={e => setEditData({...editData, ai_substitute_id: e.target.value})} className={inputCls}>
+                        <option value="">None</option>
+                        {drivers.filter(dr => dr.platform === 'ai' && dr.id !== d.id).map(dr => (
+                          <option key={dr.id} value={dr.id}>{dr.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button onClick={saveEdit} className="cursor-pointer bg-gradient-to-b from-[#7ED321] to-[#5BA318] border border-[#8EE835] text-[#0D1117] font-bold uppercase text-xs tracking-wider px-5 py-2 rounded transition-all">Save Changes</button>
