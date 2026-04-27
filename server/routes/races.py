@@ -36,7 +36,8 @@ async def get_race(race_id: int):
             t.name AS team_name,
             t.color AS team_color,
             t.car_image AS team_car_image,
-            t.logo_url AS team_logo
+            t.logo_url AS team_logo,
+            d.photo_url AS driver_photo
         FROM race_results rr
         LEFT JOIN drivers d ON rr.driver_id = d.id
         LEFT JOIN teams t ON d.team_id = t.id

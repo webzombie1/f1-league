@@ -270,12 +270,18 @@ export default function Home() {
 
                       {/* Content below */}
                       <div className="p-2 pt-1.5 flex items-center gap-2">
-                        {/* Driver photo placeholder */}
-                        <div className="w-12 h-12 rounded bg-[#1F1F1F] shrink-0 flex items-center justify-center">
-                          <svg className="w-7 h-7 text-[#777777]" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-                          </svg>
-                        </div>
+                        {/* Driver photo */}
+                        {r.driver_photo ? (
+                          <div className="w-12 h-12 rounded shrink-0 overflow-hidden" style={{ backgroundColor: r.team_color || '#1F1F1F' }}>
+                            <img src={r.driver_photo} alt="" className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded shrink-0 flex items-center justify-center" style={{ backgroundColor: r.team_color || '#1F1F1F' }}>
+                            <svg className="w-7 h-7 text-[#777777]" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                            </svg>
+                          </div>
+                        )}
 
                         {/* Name + points */}
                         <div className="min-w-0 flex-1">
@@ -426,7 +432,7 @@ export default function Home() {
           }} />
           <div className="relative py-4">
             <h2 className="text-3xl md:text-4xl font-black text-[#E8ECF4] uppercase italic tracking-tight">
-              {season?.year || '2026'} Season
+              {season?.year || '2026'} Season Standings
             </h2>
           </div>
 
@@ -440,7 +446,7 @@ export default function Home() {
                 : 'bg-[#191919] text-[#7ED321] hover:bg-[#222222]'
             }`}
           >
-            Drivers
+            Driver's Championship
           </button>
           <button
             onClick={() => setStandingsTab('teams')}
@@ -450,7 +456,7 @@ export default function Home() {
                 : 'bg-[#191919] text-[#7ED321] hover:bg-[#222222]'
             }`}
           >
-            Constructors
+            Constructor's Championship
           </button>
           </div>
         </div>
@@ -470,13 +476,13 @@ export default function Home() {
                   style={{ backgroundColor: d.team_color || '#333', minHeight: '240px' }}
                 >
                   {/* Glowing curved lines */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none">
-                    <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.15" filter="url(#podiumGlow)" />
-                    <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.12" filter="url(#podiumGlow)" />
-                    <path d="M 170,45 C 110,70 95,125 110,170 C 118,190 140,198 168,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="2" opacity="0.08" filter="url(#podiumGlow)" />
-                    <path d="M 175,65 C 130,85 118,130 128,168 C 132,182 148,194 170,198" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.8" opacity="0.2" filter="url(#podiumGlow)" />
-                    <path d="M 195,90 C 160,98 142,138 148,172 C 152,186 165,196 185,199" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.6" opacity="0.15" filter="url(#podiumGlow)" />
-                    <path d="M 130,200 C 140,155 155,120 190,85" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.5" opacity="0.08" filter="url(#podiumGlow)" />
+                  <svg className="absolute -top-[10%] -left-[10%] w-[140%] h-[140%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none">
+                    <path d="M 185,35 C 115,55 85,110 100,165 C 110,190 140,198 175,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="2" opacity="0.18" filter="url(#podiumGlow)" />
+                    <path d="M 195,60 C 135,70 105,120 118,170 C 125,190 150,198 185,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.14" filter="url(#podiumGlow)" />
+                    <path d="M 160,20 C 80,50 55,115 80,170 C 95,195 130,200 168,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="2.5" opacity="0.1" filter="url(#podiumGlow)" />
+                    <path d="M 175,40 C 100,65 80,125 95,170 C 105,190 135,198 170,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.22" filter="url(#podiumGlow)" />
+                    <path d="M 195,75 C 145,80 120,130 130,172 C 138,190 158,198 185,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.8" opacity="0.16" filter="url(#podiumGlow)" />
+                    <path d="M 100,200 C 115,140 140,90 190,50" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.6" opacity="0.1" filter="url(#podiumGlow)" />
                     <defs>
                       <filter id="podiumGlow">
                         <feGaussianBlur stdDeviation="3" result="blur" />
@@ -487,8 +493,8 @@ export default function Home() {
                       </filter>
                     </defs>
                   </svg>
-                  {/* Second layer — flipped, smaller, bottom-right */}
-                  <svg className="absolute bottom-0 -right-[40%] w-[60%] h-[60%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none" style={{ transform: 'scaleX(-1)' }}>
+                  {/* Second layer — flipped, bottom-right */}
+                  <svg className="absolute -top-[10%] -right-[20%] w-[80%] h-[80%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none" style={{ transform: 'scaleX(-1)' }}>
                     <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.1" filter="url(#podiumGlow2)" />
                     <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.08" filter="url(#podiumGlow2)" />
                     <path d="M 170,45 C 110,70 95,125 110,170 C 118,190 140,198 168,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="2" opacity="0.06" filter="url(#podiumGlow2)" />
@@ -537,12 +543,15 @@ export default function Home() {
                   </div>
 
                   {/* Driver photo — bottom right */}
-                  <div className="absolute -bottom-1 right-0 w-56 h-[125%] overflow-hidden">
+                  <div className="absolute -bottom-8 right-0 w-56 h-[125%] overflow-hidden bg-black/25 rounded-l-3xl">
                     {(d.photo_standing || d.photo_url) ? (
                       <img
                         src={d.photo_standing || d.photo_url}
                         alt={d.name}
-                        className="w-full h-full object-contain object-bottom drop-shadow-2xl"
+                        className="w-full h-full object-contain object-bottom"
+                        style={{
+                          filter: `drop-shadow(0 0 15px ${d.team_color}) drop-shadow(0 0 30px ${d.team_color}80) drop-shadow(0 0 60px ${d.team_color}40)`,
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-end justify-center opacity-15">

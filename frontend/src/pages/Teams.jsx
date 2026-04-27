@@ -85,7 +85,7 @@ export default function Teams() {
               {(team.drivers || []).filter(d => d.platform !== 'ai').map(d => (
                 <div key={d.id} className="relative p-4 flex items-end gap-3 min-h-[140px] overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}>
                   {/* Abstract glowing curved lines surrounding driver */}
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none">
+                  <svg className="absolute -inset-[14%] w-[75%] h-[112%] pointer-events-none translate-x-[20%]" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none">
                     {/* Curves around driver (bottom-right area) */}
                     <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.4" filter="url(#glow)" />
                     <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.3" filter="url(#glow)" />
@@ -106,7 +106,7 @@ export default function Teams() {
                     </defs>
                   </svg>
                   {/* Second layer — flipped, smaller, bottom-right */}
-                  <svg className="absolute bottom-0 -right-[40%] w-[60%] h-[60%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none" style={{ transform: 'scaleX(-1)' }}>
+                  <svg className="absolute bottom-0 -right-[20%] w-[66%] h-[66%] pointer-events-none translate-x-[60px]" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none" style={{ transform: 'scaleX(-1)' }}>
                     <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.3" filter="url(#glow2)" />
                     <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.2" filter="url(#glow2)" />
                     <path d="M 170,45 C 110,70 95,125 110,170 C 118,190 140,198 168,200" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="2" opacity="0.15" filter="url(#glow2)" />
@@ -124,11 +124,14 @@ export default function Teams() {
                   </svg>
                   {/* Driver standing photo */}
                   {(d.photo_standing || d.photo_url) ? (
-                    <div className="absolute bottom-0 -right-3 w-34 h-[155%] overflow-hidden">
+                    <div className="absolute -bottom-[56px] -right-[7px] w-[60%] h-[240%] overflow-hidden">
                       <img
                         src={d.photo_standing || d.photo_url}
                         alt={d.name}
-                        className="w-full h-full object-contain object-bottom drop-shadow-2xl"
+                        className="w-full h-full object-contain object-bottom"
+                        style={{
+                          filter: `drop-shadow(0 0 15px ${team.color}) drop-shadow(0 0 30px ${team.color}80) drop-shadow(0 0 60px ${team.color}40)`,
+                        }}
                       />
                     </div>
                   ) : (
