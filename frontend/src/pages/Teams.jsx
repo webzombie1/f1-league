@@ -87,16 +87,33 @@ export default function Teams() {
                   {/* Abstract glowing curved lines surrounding driver */}
                   <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none">
                     {/* Curves around driver (bottom-right area) */}
-                    <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke={team.color} strokeWidth="1.5" opacity="0.4" filter="url(#glow)" />
-                    <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke={team.color} strokeWidth="1" opacity="0.3" filter="url(#glow)" />
-                    <path d="M 170,45 C 110,70 95,125 110,170 C 118,190 140,198 168,200" stroke={team.color} strokeWidth="2" opacity="0.2" filter="url(#glow)" />
+                    <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.4" filter="url(#glow)" />
+                    <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.3" filter="url(#glow)" />
+                    <path d="M 170,45 C 110,70 95,125 110,170 C 118,190 140,198 168,200" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="2" opacity="0.2" filter="url(#glow)" />
                     {/* Inner accents */}
-                    <path d="M 175,65 C 130,85 118,130 128,168 C 132,182 148,194 170,198" stroke={team.color} strokeWidth="0.8" opacity="0.5" filter="url(#glow)" />
-                    <path d="M 195,90 C 160,98 142,138 148,172 C 152,186 165,196 185,199" stroke={team.color} strokeWidth="0.6" opacity="0.35" filter="url(#glow)" />
+                    <path d="M 175,65 C 130,85 118,130 128,168 C 132,182 148,194 170,198" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="0.8" opacity="0.5" filter="url(#glow)" />
+                    <path d="M 195,90 C 160,98 142,138 148,172 C 152,186 165,196 185,199" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="0.6" opacity="0.35" filter="url(#glow)" />
                     {/* Subtle cross */}
-                    <path d="M 130,200 C 140,155 155,120 190,85" stroke={team.color} strokeWidth="0.5" opacity="0.2" filter="url(#glow)" />
+                    <path d="M 130,200 C 140,155 155,120 190,85" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="0.5" opacity="0.2" filter="url(#glow)" />
                     <defs>
                       <filter id="glow">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                    </defs>
+                  </svg>
+                  {/* Second layer — flipped, smaller, bottom-right */}
+                  <svg className="absolute bottom-0 -right-[40%] w-[60%] h-[60%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none" style={{ transform: 'scaleX(-1)' }}>
+                    <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.3" filter="url(#glow2)" />
+                    <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.2" filter="url(#glow2)" />
+                    <path d="M 170,45 C 110,70 95,125 110,170 C 118,190 140,198 168,200" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="2" opacity="0.15" filter="url(#glow2)" />
+                    <path d="M 175,65 C 130,85 118,130 128,168 C 132,182 148,194 170,198" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="0.8" opacity="0.35" filter="url(#glow2)" />
+                    <path d="M 195,90 C 160,98 142,138 148,172 C 152,186 165,196 185,199" stroke={team.color} vectorEffect="non-scaling-stroke" strokeWidth="0.6" opacity="0.25" filter="url(#glow2)" />
+                    <defs>
+                      <filter id="glow2">
                         <feGaussianBlur stdDeviation="3" result="blur" />
                         <feMerge>
                           <feMergeNode in="blur" />

@@ -259,7 +259,9 @@ export default function Home() {
                         </span>
                         {/* Team logo top right */}
                         {r.team_logo && (
-                          <img src={r.team_logo} alt="" className="absolute top-1 right-1.5 w-5 h-5 object-contain drop-shadow-md" />
+                          <div className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center">
+                            <img src={r.team_logo} alt="" className="w-4 h-4 object-contain" />
+                          </div>
                         )}
                         {r.fastest_lap ? (
                           <span className="absolute bottom-1 right-2 text-[9px] font-bold text-purple-300 drop-shadow-md">FL</span>
@@ -404,44 +406,58 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Season separator */}
-        <div className="mt-4">
-          <div className="relative h-4 overflow-hidden mb-6">
+        {/* Season separator + header + tabs with checkered background */}
+        <div className="relative overflow-hidden mt-4">
+          {/* Green lines at top */}
+          <div className="relative h-4 overflow-hidden mb-0">
             <div className="absolute top-0 left-0 right-8 h-[3px] bg-[#7ED321]" />
             <div className="absolute top-[6px] left-12 right-0 h-[2px] bg-[#7ED321]/60" />
           </div>
-          <h2 className="text-3xl md:text-4xl font-black text-[#E8ECF4] uppercase italic tracking-tight">
-            {season?.year || '2026'} Season
-          </h2>
-        </div>
+          {/* Checkered flag pattern */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: `
+              linear-gradient(45deg, #fff 25%, transparent 25%),
+              linear-gradient(-45deg, #fff 25%, transparent 25%),
+              linear-gradient(45deg, transparent 75%, #fff 75%),
+              linear-gradient(-45deg, transparent 75%, #fff 75%)
+            `,
+            backgroundSize: '40px 40px',
+            backgroundPosition: '0 0, 0 20px, 20px -20px, -20px 0',
+          }} />
+          <div className="relative py-4">
+            <h2 className="text-3xl md:text-4xl font-black text-[#E8ECF4] uppercase italic tracking-tight">
+              {season?.year || '2026'} Season
+            </h2>
+          </div>
 
-        {/* Drivers / Teams tab switcher */}
-        <div className="flex gap-6 border-b border-[#1F1F1F]">
+          {/* Drivers / Teams tab switcher */}
+          <div className="relative flex gap-1 pb-0 border-b-2 border-[#7ED321]">
           <button
             onClick={() => setStandingsTab('drivers')}
-            className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+            className={`px-5 py-2 text-sm font-bold uppercase tracking-wider transition-colors cursor-pointer rounded-t-lg ${
               standingsTab === 'drivers'
-                ? 'text-[#E8ECF4] border-b-2 border-[#7ED321]'
-                : 'text-[#777777] hover:text-[#999999]'
+                ? 'bg-[#7ED321] text-[#0D1117] font-black'
+                : 'bg-[#191919] text-[#7ED321] hover:bg-[#222222]'
             }`}
           >
             Drivers
           </button>
           <button
             onClick={() => setStandingsTab('teams')}
-            className={`pb-2 text-sm font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+            className={`px-5 py-2 text-sm font-bold uppercase tracking-wider transition-colors cursor-pointer rounded-t-lg ${
               standingsTab === 'teams'
-                ? 'text-[#E8ECF4] border-b-2 border-[#7ED321]'
-                : 'text-[#777777] hover:text-[#999999]'
+                ? 'bg-[#7ED321] text-[#0D1117] font-black'
+                : 'bg-[#191919] text-[#7ED321] hover:bg-[#222222]'
             }`}
           >
-            Teams
+            Constructors
           </button>
+          </div>
         </div>
 
         {/* Podium Cards — Top 3 */}
         {topDrivers.length >= 3 && standingsTab === 'drivers' && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 -mt-6">
             {[topDrivers[0], topDrivers[1], topDrivers[2]].map((d, i) => {
               const pos = i + 1
               const suffix = pos === 1 ? 'ST' : pos === 2 ? 'ND' : 'RD'
@@ -453,15 +469,47 @@ export default function Home() {
                   className="relative rounded-xl overflow-hidden p-6 flex flex-col justify-between hover:brightness-110 transition shadow-lg shadow-black/30"
                   style={{ backgroundColor: d.team_color || '#333', minHeight: '240px' }}
                 >
-                  {/* Halftone/dot pattern overlay */}
-                  <div className="absolute inset-0 opacity-10" style={{
-                    backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.3) 1px, transparent 1px)',
-                    backgroundSize: '6px 6px',
-                  }} />
+                  {/* Glowing curved lines */}
+                  <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none">
+                    <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.15" filter="url(#podiumGlow)" />
+                    <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.12" filter="url(#podiumGlow)" />
+                    <path d="M 170,45 C 110,70 95,125 110,170 C 118,190 140,198 168,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="2" opacity="0.08" filter="url(#podiumGlow)" />
+                    <path d="M 175,65 C 130,85 118,130 128,168 C 132,182 148,194 170,198" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.8" opacity="0.2" filter="url(#podiumGlow)" />
+                    <path d="M 195,90 C 160,98 142,138 148,172 C 152,186 165,196 185,199" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.6" opacity="0.15" filter="url(#podiumGlow)" />
+                    <path d="M 130,200 C 140,155 155,120 190,85" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.5" opacity="0.08" filter="url(#podiumGlow)" />
+                    <defs>
+                      <filter id="podiumGlow">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                    </defs>
+                  </svg>
+                  {/* Second layer — flipped, smaller, bottom-right */}
+                  <svg className="absolute bottom-0 -right-[40%] w-[60%] h-[60%] pointer-events-none" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none" style={{ transform: 'scaleX(-1)' }}>
+                    <path d="M 185,55 C 135,75 115,120 125,165 C 130,185 150,195 175,198" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1.5" opacity="0.1" filter="url(#podiumGlow2)" />
+                    <path d="M 195,80 C 155,90 135,130 142,170 C 146,186 160,196 185,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="1" opacity="0.08" filter="url(#podiumGlow2)" />
+                    <path d="M 170,45 C 110,70 95,125 110,170 C 118,190 140,198 168,200" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="2" opacity="0.06" filter="url(#podiumGlow2)" />
+                    <path d="M 175,65 C 130,85 118,130 128,168 C 132,182 148,194 170,198" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.8" opacity="0.12" filter="url(#podiumGlow2)" />
+                    <path d="M 195,90 C 160,98 142,138 148,172 C 152,186 165,196 185,199" stroke="white" vectorEffect="non-scaling-stroke" strokeWidth="0.6" opacity="0.1" filter="url(#podiumGlow2)" />
+                    <defs>
+                      <filter id="podiumGlow2">
+                        <feGaussianBlur stdDeviation="3" result="blur" />
+                        <feMerge>
+                          <feMergeNode in="blur" />
+                          <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                      </filter>
+                    </defs>
+                  </svg>
 
                   {/* Team logo — top right */}
                   {d.team_logo && (
-                    <img src={d.team_logo} alt="" className="absolute top-4 right-4 w-10 h-10 object-contain opacity-70" />
+                    <div className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center z-10">
+                      <img src={d.team_logo} alt="" className="w-6 h-6 object-contain" />
+                    </div>
                   )}
 
                   {/* Content */}
