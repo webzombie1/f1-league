@@ -48,7 +48,8 @@ async def get_race(race_id: int):
         LEFT JOIN drivers d ON d.id = COALESCE(
             rr.driver_id,
             (SELECT id FROM drivers
-             WHERE season_id = ? AND LOWER(name) = LOWER(rr.driver_name_raw)
+             WHERE season_id = ?
+               AND LOWER(TRIM(name)) = LOWER(TRIM(rr.driver_name_raw))
              LIMIT 1)
         )
         LEFT JOIN drivers h ON h.id = (
