@@ -27,9 +27,11 @@ async def get_race(race_id: int):
     if not race:
         return {"detail": "Race not found."}
 
-    # If the recorded driver is an AI substitute, remap to the human driver
-    # who has them assigned (h.ai_substitute_id = d.id). The human's identity
-    # and team take over so the result reads as the human's.
+    # Resolve the result's driver: use rr.driver_id if set, otherwise fall back
+    # to a name match on rr.driver_name_raw within the race's season (covers
+    # rows submitted before the driver record existed). Then, if that resolved
+    # driver is an AI substitute, remap to the human who has them assigned —
+    # the human's identity and team take over so the result reads as theirs.
     results = execute("""
         SELECT
             rr.*,
@@ -42,7 +44,12 @@ async def get_race(race_id: int):
             COALESCE(t_h.logo_url, t_d.logo_url) AS team_logo,
             COALESCE(h.photo_url, d.photo_url) AS driver_photo
         FROM race_results rr
-        LEFT JOIN drivers d ON rr.driver_id = d.id
+        LEFT JOIN drivers d ON d.id = COALESCE(
+            rr.driver_id,
+            (SELECT id FROM drivers
+             WHERE season_id = ? AND LOWER(name) = LOWER(rr.driver_name_raw)
+             LIMIT 1)
+        )
         LEFT JOIN drivers h ON h.id = (
             SELECT id FROM drivers
             WHERE ai_substitute_id = d.id AND d.is_ai = 1
@@ -54,7 +61,7 @@ async def get_race(race_id: int):
         ORDER BY
             CASE WHEN rr.position IS NOT NULL THEN 0 ELSE 1 END,
             rr.position
-    """, (race_id,))
+    """, (race["season_id"], race_id))
 
     # Attach tyre stints to each result
     for result in results:
