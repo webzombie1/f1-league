@@ -24,6 +24,7 @@ export default function ManageDrivers() {
       team_id: d.team_id || '', ea_tag: d.ea_tag || '', platform: d.platform || '',
       discord_name: d.discord_name || '', discord_url: d.discord_url || '',
       ai_substitute_id: d.ai_substitute_id || '',
+      is_ai: d.is_ai || 0,
     })
   }
 
@@ -115,7 +116,7 @@ export default function ManageDrivers() {
               <option value="steam">Steam</option>
               <option value="playstation">PlayStation</option>
               <option value="xbox">Xbox</option>
-              <option value="ai">AI</option>
+              <option value="other">Other</option>
             </select>
           </div>
         </div>
@@ -164,10 +165,11 @@ export default function ManageDrivers() {
                 <span className="font-medium text-[#E8ECF4]">#{d.number || '?'} {d.name}</span>
                 <span className="text-[#999999] text-sm">{d.abbreviation}</span>
                 <span className="text-[#777777] text-sm">— {d.team_name || 'No team'}</span>
-                {d.discord_name && <span className="text-[#777777] text-xs ml-2 font-mono">({d.discord_name})</span>}
+                {d.is_ai ? <span className="text-xs ml-2 bg-[#7ED321]/20 text-[#7ED321] px-1.5 py-0.5 rounded font-bold">AI</span> : null}
+              {d.discord_name && <span className="text-[#777777] text-xs ml-2 font-mono">({d.discord_name})</span>}
               {d.ai_substitute_id && (() => {
                 const sub = drivers.find(dr => dr.id === d.ai_substitute_id)
-                return sub ? <span className="text-[#999999] text-xs ml-2">→ AI: {sub.name}</span> : null
+                return sub ? <span className="text-[#999999] text-xs ml-2">→ Sub: {sub.name}</span> : null
               })()}
               </div>
               <svg className={`w-4 h-4 text-[#777777] transition-transform ${editingId === d.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -239,7 +241,7 @@ export default function ManageDrivers() {
                       <option value="steam">Steam</option>
                       <option value="playstation">PlayStation</option>
                       <option value="xbox">Xbox</option>
-                      <option value="ai">AI</option>
+                      <option value="other">Other</option>
                     </select>
                   </div>
                 </div>
@@ -261,12 +263,26 @@ export default function ManageDrivers() {
                       {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                   </div>
-                  {editData.platform !== 'ai' && (
+                  <div className="w-28">
+                    <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">AI Driver</label>
+                    <button
+                      type="button"
+                      onClick={() => setEditData({...editData, is_ai: editData.is_ai ? 0 : 1})}
+                      className={`w-full px-3 py-2 rounded-lg text-sm font-bold uppercase cursor-pointer transition-colors ${
+                        editData.is_ai
+                          ? 'bg-[#7ED321] text-[#0D1117]'
+                          : 'bg-[#191919] text-[#777777] border border-[#1F1F1F]'
+                      }`}
+                    >
+                      {editData.is_ai ? 'Yes' : 'No'}
+                    </button>
+                  </div>
+                  {!editData.is_ai && (
                     <div className="flex-1">
                       <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">AI Substitute</label>
                       <select value={editData.ai_substitute_id} onChange={e => setEditData({...editData, ai_substitute_id: e.target.value})} className={inputCls}>
                         <option value="">None</option>
-                        {drivers.filter(dr => dr.platform === 'ai' && dr.id !== d.id).map(dr => (
+                        {drivers.filter(dr => dr.is_ai && dr.id !== d.id).map(dr => (
                           <option key={dr.id} value={dr.id}>{dr.name}</option>
                         ))}
                       </select>

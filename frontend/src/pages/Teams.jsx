@@ -82,7 +82,7 @@ export default function Teams() {
 
             {/* Drivers */}
             <div className="relative grid grid-cols-2 gap-px bg-black/20">
-              {(team.drivers || []).filter(d => d.platform !== 'ai').map(d => (
+              {(team.drivers || []).filter(d => !d.is_ai).map(d => (
                 <div key={d.id} className="relative p-4 flex items-end gap-3 min-h-[140px] overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}>
                   {/* Abstract glowing curved lines surrounding driver */}
                   <svg className="absolute -inset-[14%] w-[75%] h-[112%] pointer-events-none translate-x-[20%]" viewBox="0 0 200 200" preserveAspectRatio="none" fill="none">

@@ -22,7 +22,7 @@ async def list_teams(season_id: int = Query(None)):
     # Attach drivers to each team
     for team in teams:
         team["drivers"] = execute("""
-            SELECT id, name, abbreviation, number, photo_url, photo_standing, platform
+            SELECT id, name, abbreviation, number, photo_url, photo_standing, platform, is_ai
             FROM drivers
             WHERE team_id = ? AND is_active = 1
             ORDER BY number

@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS drivers (
     discord_name    TEXT DEFAULT '',
     discord_url     TEXT DEFAULT '',
     ai_substitute_id INTEGER,
+    is_ai           INTEGER DEFAULT 0,
     is_active       INTEGER DEFAULT 1,
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
@@ -172,6 +173,7 @@ def init_db():
         ("drivers", "discord_name", "TEXT DEFAULT ''"),
         ("drivers", "discord_url", "TEXT DEFAULT ''"),
         ("drivers", "ai_substitute_id", "INTEGER"),
+        ("drivers", "is_ai", "INTEGER DEFAULT 0"),
         ("seasons", "season_start", "TEXT DEFAULT ''"),
         ("seasons", "race_day", "INTEGER DEFAULT 3"),
         ("seasons", "race_time", "TEXT DEFAULT '20:00'"),

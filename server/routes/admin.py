@@ -160,7 +160,7 @@ async def update_driver(driver_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url", "photo_standing", "ea_tag", "platform", "discord_name", "discord_url", "ai_substitute_id"):
+    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url", "photo_standing", "ea_tag", "platform", "discord_name", "discord_url", "ai_substitute_id", "is_ai"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
