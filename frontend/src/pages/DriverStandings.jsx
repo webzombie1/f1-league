@@ -76,7 +76,19 @@ export default function DriverStandings() {
                     <span className="font-medium text-[#E8ECF4]">{d.name}</span>
                   </Link>
                 </td>
-                <td className="py-3 px-2 text-[#999999] hidden md:table-cell">{d.team_name}</td>
+                <td className="py-3 px-2 text-[#999999] hidden md:table-cell">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center"
+                      style={{ backgroundColor: d.team_color || '#555' }}
+                    >
+                      {d.team_logo ? (
+                        <img src={d.team_logo} alt="" className="w-4 h-4 object-contain" />
+                      ) : null}
+                    </div>
+                    <span>{d.team_name}</span>
+                  </div>
+                </td>
                 <td className="py-3 px-2 text-center font-semibold text-[#7ED321]">{d.points}</td>
                 <td className="py-3 px-2 text-center text-[#999999] hidden sm:table-cell">{d.wins}</td>
                 <td className="py-3 px-2 text-center text-[#999999] hidden sm:table-cell">{d.podiums}</td>
