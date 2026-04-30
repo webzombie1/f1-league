@@ -150,7 +150,21 @@ export default function RaceResult() {
                       <span className="font-medium text-[#E8ECF4]">{r.driver_name || r.driver_name_raw}</span>
                     </Link>
                   </td>
-                  <td className="py-3 px-2 text-[#999999] hidden md:table-cell">{r.team_name || '-'}</td>
+                  <td className="py-3 px-2 text-[#999999] hidden md:table-cell">
+                    {r.team_name ? (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center"
+                          style={{ backgroundColor: r.team_color ? `${r.team_color}80` : 'rgba(85,85,85,0.5)' }}
+                        >
+                          {r.team_logo ? (
+                            <img src={r.team_logo} alt="" className="w-4 h-4 object-contain" />
+                          ) : null}
+                        </div>
+                        <span>{r.team_name}</span>
+                      </div>
+                    ) : '-'}
+                  </td>
                   <td className="py-3 px-2 text-center text-[#999999] hidden sm:table-cell">{r.grid_position || '-'}</td>
                   <td className="py-3 px-2 text-center text-[#999999]">
                     {r.position === 1 ? '-' : r.gap_to_leader || '-'}
@@ -224,7 +238,21 @@ export default function RaceResult() {
                       <span className="font-medium text-[#E8ECF4]">{r.driver_name || r.driver_name_raw}</span>
                     </Link>
                   </td>
-                  <td className="py-3 px-2 text-[#999999] hidden md:table-cell">{r.team_name || '-'}</td>
+                  <td className="py-3 px-2 text-[#999999] hidden md:table-cell">
+                    {r.team_name ? (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center"
+                          style={{ backgroundColor: r.team_color ? `${r.team_color}80` : 'rgba(85,85,85,0.5)' }}
+                        >
+                          {r.team_logo ? (
+                            <img src={r.team_logo} alt="" className="w-4 h-4 object-contain" />
+                          ) : null}
+                        </div>
+                        <span>{r.team_name}</span>
+                      </div>
+                    ) : '-'}
+                  </td>
                   <td className="py-3 px-2 text-center text-[#E8ECF4] font-mono">
                     {formatTime(r.quali_time_ms)}
                   </td>
