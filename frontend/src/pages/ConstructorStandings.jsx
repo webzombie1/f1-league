@@ -19,14 +19,21 @@ export default function ConstructorStandings() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#E8ECF4]">Constructor Standings</h1>
-        <Link to="/standings" className="text-sm text-[#7ED321] hover:underline">
-          ← Drivers
-        </Link>
+      <h1 className="text-2xl font-bold text-[#E8ECF4]">Standings</h1>
+
+      {/* Drivers / Constructors tab switcher — same style as the home page */}
+      <div className="relative flex gap-1 pb-0 border-b-2 border-[#7ED321]">
+        <Link
+          to="/standings"
+          className="px-5 py-2 text-sm font-bold uppercase tracking-wider transition-colors cursor-pointer rounded-t-lg bg-[#191919] text-[#7ED321] hover:bg-[#222222]"
+        >Drivers</Link>
+        <Link
+          to="/standings/constructors"
+          className="px-5 py-2 text-sm font-bold uppercase tracking-wider transition-colors cursor-pointer rounded-t-lg bg-[#7ED321] text-[#0D1117] font-black"
+        >Constructors</Link>
       </div>
 
-      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-hidden">
+      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-hidden -mt-6">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#1F1F1F] text-[#999999] text-xs uppercase tracking-wider">
