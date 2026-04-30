@@ -35,6 +35,7 @@ async def get_race(race_id: int):
     results = execute("""
         SELECT
             rr.*,
+            COALESCE(h.id, d.id) AS effective_driver_id,
             COALESCE(h.name, d.name) AS driver_name,
             COALESCE(h.abbreviation, d.abbreviation) AS driver_abbreviation,
             COALESCE(h.number, d.number) AS driver_number,
@@ -62,6 +63,18 @@ async def get_race(race_id: int):
             CASE WHEN rr.position IS NOT NULL THEN 0 ELSE 1 END,
             rr.position
     """, (race["season_id"], race_id))
+
+    # Drop a human's DNS row when their AI substitute raced for them — the
+    # AI's row already remapped to the human, so showing both would duplicate
+    # the human as a finisher and a DNS.
+    raced_drivers = {
+        r["effective_driver_id"] for r in results
+        if r["status"] != "dns" and r["effective_driver_id"] is not None
+    }
+    results = [
+        r for r in results
+        if not (r["status"] == "dns" and r["effective_driver_id"] in raced_drivers)
+    ]
 
     # Attach tyre stints to each result
     for result in results:
