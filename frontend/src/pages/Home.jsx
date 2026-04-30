@@ -49,9 +49,17 @@ function StandingsSection({ topDrivers, tab, setTab }) {
                   </svg>
                 </div>
               )}
-              <div className="flex-1">
+              <div className="flex-1 flex items-center gap-2">
                 <span className="font-semibold text-[#E8ECF4]">{d.name}</span>
-                <span className="text-[#777777] text-xs ml-2">{d.team_name}</span>
+                <span className="text-[#777777] text-xs">{d.team_name}</span>
+                <div
+                  className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center"
+                  style={{ backgroundColor: d.team_color || '#555' }}
+                >
+                  {d.team_logo ? (
+                    <img src={d.team_logo} alt="" className="w-4 h-4 object-contain" />
+                  ) : null}
+                </div>
               </div>
               <span className="font-bold text-[#E8ECF4] text-sm">{d.points}</span>
             </Link>
