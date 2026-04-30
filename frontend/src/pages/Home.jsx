@@ -176,7 +176,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-[#0D1117]/80 to-transparent" />
 
         <div className="relative h-full max-w-6xl mx-auto px-4 flex flex-col justify-end pb-10">
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#7ED321] mb-0">
+          <p className="text-sm font-black uppercase tracking-[0.2em] text-[#7ED321] mb-0">
             {lastRace ? `Round ${lastRace.round_number} · ${lastRace.country}` : 'Up Next'}
           </p>
           {lastRace && heroHeadline ? (
