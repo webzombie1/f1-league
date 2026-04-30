@@ -54,7 +54,7 @@ function StandingsSection({ topDrivers, tab, setTab }) {
                 <span className="text-[#777777] text-xs">{d.team_name}</span>
                 <div
                   className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center"
-                  style={{ backgroundColor: d.team_color || '#555' }}
+                  style={{ backgroundColor: d.team_color ? `${d.team_color}80` : 'rgba(85,85,85,0.5)' }}
                 >
                   {d.team_logo ? (
                     <img src={d.team_logo} alt="" className="w-4 h-4 object-contain" />
@@ -81,7 +81,7 @@ function StandingsSection({ topDrivers, tab, setTab }) {
               className="flex items-center py-3.5 border-b border-[#1F1F1F]/40 -mx-1 px-1"
             >
               <span className="text-sm font-bold text-[#777777] w-10 text-center">{i + 1}</span>
-              <div className="w-7 h-7 rounded-full mx-3 shrink-0 flex items-center justify-center" style={{ backgroundColor: t.color || '#555' }}>
+              <div className="w-7 h-7 rounded-full mx-3 shrink-0 flex items-center justify-center" style={{ backgroundColor: t.color ? `${t.color}80` : 'rgba(85,85,85,0.5)' }}>
                 {t.logo ? <img src={t.logo} alt="" className="w-4 h-4 object-contain" /> : null}
               </div>
               <span className="font-semibold text-[#E8ECF4] flex-1">{t.name}</span>

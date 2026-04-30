@@ -50,7 +50,7 @@ export default function ConstructorStandings() {
                 <td className="py-3 px-4 font-medium text-[#999999]">{i + 1}</td>
                 <td className="py-3 px-2">
                   <Link to={`/teams/${t.id}`} className="flex items-center gap-3 hover:text-[#7ED321]">
-                    <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center" style={{ backgroundColor: t.color || '#555' }}>
+                    <div className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center" style={{ backgroundColor: t.color ? `${t.color}80` : 'rgba(85,85,85,0.5)' }}>
                       {t.logo_url ? (
                         <img src={t.logo_url} alt="" className="w-5 h-5 object-contain" />
                       ) : null}

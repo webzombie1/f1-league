@@ -80,7 +80,7 @@ export default function DriverStandings() {
                   <div className="flex items-center gap-2">
                     <div
                       className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center"
-                      style={{ backgroundColor: d.team_color || '#555' }}
+                      style={{ backgroundColor: d.team_color ? `${d.team_color}80` : 'rgba(85,85,85,0.5)' }}
                     >
                       {d.team_logo ? (
                         <img src={d.team_logo} alt="" className="w-4 h-4 object-contain" />
