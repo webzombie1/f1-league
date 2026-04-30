@@ -11,17 +11,31 @@ function formatTime(ms) {
   return `${min}:${sec.padStart(6, '0')}`
 }
 
+function getYoutubeId(url) {
+  if (!url) return null
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/)
+  return match ? match[1] : null
+}
+
 export default function RaceResult() {
   const { raceId } = useParams()
   const [race, setRace] = useState(null)
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState('race')
+  const [highlights, setHighlights] = useState([])
+  const [article, setArticle] = useState(null)
+  const [playingVideo, setPlayingVideo] = useState(null)
 
   useEffect(() => {
     get(`/races/${raceId}`)
       .then(setRace)
       .catch(() => {})
       .finally(() => setLoading(false))
+    get(`/highlights?race_id=${raceId}`).then(setHighlights).catch(() => {})
+    get('/articles').then(arts => {
+      const match = (arts || []).find(a => String(a.race_id) === String(raceId))
+      if (match) setArticle(match)
+    }).catch(() => {})
   }, [raceId])
 
   if (loading) {
@@ -226,6 +240,110 @@ export default function RaceResult() {
           <p className="text-center text-[#777777] text-sm py-8">No results yet.</p>
         )}
       </div>
+
+      {/* Highlights + race summary */}
+      {(highlights.length > 0 || article) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Video Highlights */}
+          <div className="bg-[#111111] border border-[#1F1F1F] rounded-xl overflow-hidden shadow-lg shadow-black/30">
+            <div className="px-5 py-4 border-b border-[#1F1F1F]">
+              <h2 className="text-base font-bold uppercase tracking-wider text-[#E8ECF4]">Highlights</h2>
+            </div>
+            {highlights.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
+                {highlights.map((video) => {
+                  const ytId = getYoutubeId(video.youtube_url)
+                  return (
+                    <button
+                      key={video.id}
+                      onClick={() => setPlayingVideo(video)}
+                      className="group block rounded-lg overflow-hidden bg-[#0D1117] border border-[#1F1F1F] hover:border-[#7ED321]/40 transition-colors text-left cursor-pointer"
+                    >
+                      <div className="relative aspect-video bg-[#191919] overflow-hidden">
+                        {ytId && (
+                          <img
+                            src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+                            alt=""
+                            className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
+                          />
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-[#7ED321]/90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg className="w-4 h-4 text-[#0D1117] ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="px-3 py-2 text-xs font-medium text-[#E8ECF4] truncate">
+                        {video.title}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="p-6 text-center">
+                <p className="text-[#777777] text-sm">No highlights yet.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Race summary */}
+          <div className="bg-[#111111] border border-[#1F1F1F] rounded-xl overflow-hidden shadow-lg shadow-black/30 flex flex-col">
+            <div className="px-5 py-4 border-b border-[#1F1F1F]">
+              <h2 className="text-base font-bold uppercase tracking-wider text-[#E8ECF4]">Race Summary</h2>
+            </div>
+            {article ? (
+              <div className="p-5 flex-1 flex flex-col">
+                <h3 className="text-lg font-black text-[#E8ECF4] uppercase leading-tight">
+                  {article.headline}
+                </h3>
+                {article.subtitle && (
+                  <p className="text-sm text-[#999999] mt-2 leading-relaxed">{article.subtitle}</p>
+                )}
+                {article.body && (
+                  <p className="text-sm text-[#BBBBBB] mt-4 leading-relaxed line-clamp-5">
+                    {article.body}
+                  </p>
+                )}
+                <div className="mt-auto pt-4">
+                  <Link
+                    to={`/article/${article.id}`}
+                    className="inline-flex items-center text-xs font-bold uppercase tracking-wider text-[#7ED321] hover:underline"
+                  >
+                    Full Story →
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center flex-1 flex items-center justify-center">
+                <p className="text-[#777777] text-sm">No article for this race yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Video player modal */}
+      {playingVideo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80" onClick={() => setPlayingVideo(null)}>
+          <div className="w-full max-w-4xl mx-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-medium text-[#E8ECF4] truncate">{playingVideo.title}</h3>
+              <button onClick={() => setPlayingVideo(null)} className="text-[#999999] hover:text-white text-2xl leading-none cursor-pointer">×</button>
+            </div>
+            <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+              <iframe
+                className="absolute inset-0 w-full h-full rounded-lg"
+                src={`https://www.youtube.com/embed/${getYoutubeId(playingVideo.youtube_url)}?autoplay=1`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
