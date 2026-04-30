@@ -34,6 +34,27 @@ export default function ManageResults() {
     if (selectedRace) loadResults(selectedRace.id)
   }
 
+  const deleteResult = async (resultId) => {
+    if (!confirm('Remove this driver from the results? This cannot be undone.')) return
+    await del(`/admin/results/${resultId}`)
+    if (selectedRace) loadResults(selectedRace.id)
+  }
+
+  // Swap positions with the adjacent finished result above/below in the
+  // sorted list. Operates on position values so the API's ORDER BY position
+  // reflects the new order on reload.
+  const swapPositions = async (idx, dir) => {
+    const finished = results.filter(r => r.status === 'finished' && r.position != null)
+    const target = finished.findIndex(r => r.id === results[idx].id)
+    const otherIdx = dir === 'up' ? target - 1 : target + 1
+    if (target < 0 || otherIdx < 0 || otherIdx >= finished.length) return
+    const a = finished[target]
+    const b = finished[otherIdx]
+    await put(`/admin/results/${a.id}`, { position: b.position })
+    await put(`/admin/results/${b.id}`, { position: a.position })
+    if (selectedRace) loadResults(selectedRace.id)
+  }
+
   const clearResults = async (raceId) => {
     if (!confirm('Clear all results for this race? This cannot be undone.')) return
     await del(`/admin/races/${raceId}/results`)
@@ -262,19 +283,44 @@ export default function ManageResults() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[#1F1F1F] text-[#999999] text-xs uppercase tracking-wider">
+                    <th className="text-center py-3 px-1 w-10"></th>
                     <th className="text-center py-3 px-2 w-16">Pos</th>
                     <th className="text-left py-3 px-2">Driver</th>
                     <th className="text-center py-3 px-2 w-16">Grid</th>
                     <th className="text-center py-3 px-2 w-24">Quali Time</th>
                     <th className="text-center py-3 px-2 w-24">Best Lap</th>
+                    <th className="text-center py-3 px-2 w-24">Total Time</th>
                     <th className="text-center py-3 px-2 w-28">Status</th>
                     <th className="text-center py-3 px-2 w-16">Pts</th>
                     <th className="text-center py-3 px-2 w-12">FL</th>
+                    <th className="text-center py-3 px-1 w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {results.map(r => (
+                  {results.map((r, i) => {
+                    const finishedList = results.filter(x => x.status === 'finished' && x.position != null)
+                    const finishedIdx = finishedList.findIndex(x => x.id === r.id)
+                    const canReorder = finishedIdx >= 0
+                    const canMoveUp = canReorder && finishedIdx > 0
+                    const canMoveDown = canReorder && finishedIdx < finishedList.length - 1
+                    return (
                     <tr key={r.id} className="border-b border-[#1F1F1F]/50">
+                      <td className="py-2 px-1 text-center">
+                        <div className="flex flex-col items-center gap-0.5">
+                          <button
+                            onClick={() => swapPositions(i, 'up')}
+                            disabled={!canMoveUp}
+                            className={`text-[#777777] hover:text-[#E8ECF4] disabled:opacity-20 disabled:cursor-not-allowed text-xs leading-none cursor-pointer`}
+                            title="Move up"
+                          >▲</button>
+                          <button
+                            onClick={() => swapPositions(i, 'down')}
+                            disabled={!canMoveDown}
+                            className={`text-[#777777] hover:text-[#E8ECF4] disabled:opacity-20 disabled:cursor-not-allowed text-xs leading-none cursor-pointer`}
+                            title="Move down"
+                          >▼</button>
+                        </div>
+                      </td>
                       <td className="py-2 px-2 text-center">
                         <input
                           type="number"
@@ -319,6 +365,39 @@ export default function ManageResults() {
                         />
                       </td>
                       <td className="py-2 px-2 text-center">
+                        <input
+                          type="text"
+                          defaultValue={r.total_time_s != null ? (() => {
+                            const total = Math.round(r.total_time_s * 1000)
+                            const h = Math.floor(total / 3600000)
+                            const m = Math.floor((total % 3600000) / 60000)
+                            const s = Math.floor((total % 60000) / 1000)
+                            const ms = total % 1000
+                            return h > 0
+                              ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`
+                              : `${m}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`
+                          })() : ''}
+                          placeholder="1:23:45.678"
+                          onBlur={e => {
+                            const v = e.target.value.trim()
+                            if (!v) {
+                              updateResult(r.id, { total_time_s: null })
+                              return
+                            }
+                            // Match h:mm:ss.mmm or m:ss.mmm (ms optional)
+                            const t = v.match(/^(?:(\d+):)?(\d+):(\d+)(?:\.(\d+))?$/)
+                            if (t) {
+                              const h = parseInt(t[1] || '0')
+                              const m = parseInt(t[2])
+                              const s = parseInt(t[3])
+                              const ms = t[4] ? parseInt(t[4].padEnd(3,'0').slice(0,3)) : 0
+                              updateResult(r.id, { total_time_s: h*3600 + m*60 + s + ms/1000 })
+                            }
+                          }}
+                          className={`${inputCls} w-22 text-center font-mono text-xs`}
+                        />
+                      </td>
+                      <td className="py-2 px-2 text-center">
                         <select
                           value={r.status}
                           onChange={e => updateResult(r.id, { status: e.target.value })}
@@ -346,8 +425,15 @@ export default function ManageResults() {
                           className="accent-[#7ED321]"
                         />
                       </td>
+                      <td className="py-2 px-1 text-center">
+                        <button
+                          onClick={() => deleteResult(r.id)}
+                          className="text-[#777777] hover:text-red-400 cursor-pointer text-base leading-none"
+                          title="Remove from results"
+                        >×</button>
+                      </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>

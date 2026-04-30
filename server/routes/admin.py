@@ -427,7 +427,8 @@ async def update_result(result_id: int, request: Request):
 
     for field in ("position", "grid_position", "laps_completed", "status", "status_reason",
                   "points_awarded", "fastest_lap", "gap_to_leader", "driver_id",
-                  "penalties_time_s", "num_penalties", "best_lap_time_ms", "quali_time_ms"):
+                  "penalties_time_s", "num_penalties", "best_lap_time_ms", "quali_time_ms",
+                  "total_time_s"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -437,6 +438,17 @@ async def update_result(result_id: int, request: Request):
         execute(f"UPDATE race_results SET {', '.join(updates)} WHERE id = ?", tuple(params), fetch="none")
 
     return {"status": "updated"}
+
+
+@router.delete("/results/{result_id}")
+async def delete_result(result_id: int):
+    """Delete a single race result row (and its tyre stints)."""
+    conn = get_conn()
+    conn.execute("DELETE FROM tyre_stints WHERE result_id = ?", (result_id,))
+    conn.execute("DELETE FROM race_results WHERE id = ?", (result_id,))
+    conn.commit()
+    conn.close()
+    return {"status": "deleted"}
 
 
 @router.delete("/races/{race_id}/results")
