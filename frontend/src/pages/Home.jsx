@@ -180,12 +180,12 @@ export default function Home() {
             {lastRace ? `Round ${lastRace.round_number} · ${lastRace.country}` : 'Up Next'}
           </p>
           {lastRace && heroHeadline ? (
-            <>
-              <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight max-w-3xl">
+            <div className="bg-black/50 backdrop-blur-sm rounded-lg p-6 mt-2 max-w-3xl w-fit">
+              <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight">
                 {heroHeadline}
               </h1>
               {heroSubtitle && (
-                <p className="text-lg text-[#999999] mt-3 max-w-2xl leading-relaxed">
+                <p className="text-lg text-[#CCCCCC] mt-3 max-w-2xl leading-relaxed">
                   {heroSubtitle}
                 </p>
               )}
@@ -195,7 +195,7 @@ export default function Home() {
               >
                 {latestArticle ? 'Full Story' : 'Full Results'}
               </Link>
-            </>
+            </div>
           ) : heroRace ? (
             <>
               <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight">
