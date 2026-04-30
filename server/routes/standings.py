@@ -74,20 +74,44 @@ async def constructor_standings(season_id: int = Query(None)):
             return []
         season_id = season["id"]
 
+    # Mirror the driver-standings remap so AI substitute results are credited
+    # to the human's team. AI drivers are excluded from the team's driver
+    # list — their points reach the team via the human they sub for.
     return execute("""
         SELECT
             t.id,
             t.name,
             t.color,
             t.logo_url,
-            COALESCE(SUM(rr.points_awarded), 0) AS points,
-            COALESCE(SUM(CASE WHEN rr.position = 1 THEN 1 ELSE 0 END), 0) AS wins,
-            COALESCE(SUM(CASE WHEN rr.position <= 3 AND rr.position IS NOT NULL THEN 1 ELSE 0 END), 0) AS podiums
+            COALESCE(SUM(r.points_awarded), 0) AS points,
+            COALESCE(SUM(CASE WHEN r.position = 1 THEN 1 ELSE 0 END), 0) AS wins,
+            COALESCE(SUM(CASE WHEN r.position <= 3 AND r.position IS NOT NULL THEN 1 ELSE 0 END), 0) AS podiums
         FROM teams t
-        LEFT JOIN drivers d ON d.team_id = t.id AND d.is_active = 1
-        LEFT JOIN race_results rr ON rr.driver_id = d.id
-        LEFT JOIN races r ON rr.race_id = r.id AND r.status = 'completed'
+        LEFT JOIN drivers d ON d.team_id = t.id AND d.is_active = 1 AND d.is_ai = 0
+        LEFT JOIN (
+            SELECT
+                rr.id AS rr_id,
+                rr.race_id,
+                rr.position,
+                rr.status,
+                rr.points_awarded,
+                COALESCE(h.id, sd.id) AS effective_driver_id
+            FROM race_results rr
+            LEFT JOIN drivers sd ON sd.id = COALESCE(
+                rr.driver_id,
+                (SELECT id FROM drivers
+                 WHERE season_id = ?
+                   AND LOWER(TRIM(name)) = LOWER(TRIM(rr.driver_name_raw))
+                 LIMIT 1)
+            )
+            LEFT JOIN drivers h ON h.id = (
+                SELECT id FROM drivers
+                WHERE ai_substitute_id = sd.id AND sd.is_ai = 1
+                LIMIT 1
+            )
+        ) r ON r.effective_driver_id = d.id
+        LEFT JOIN races ra ON r.race_id = ra.id AND ra.status = 'completed'
         WHERE t.season_id = ?
         GROUP BY t.id
         ORDER BY points DESC, wins DESC
-    """, (season_id,))
+    """, (season_id, season_id))
