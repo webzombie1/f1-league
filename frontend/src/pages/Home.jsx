@@ -181,7 +181,7 @@ export default function Home() {
           </p>
           {lastRace && heroHeadline ? (
             <div className="bg-black/50 backdrop-blur-sm rounded-lg p-6 mt-2 max-w-3xl w-fit">
-              <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight">
+              <h1 className="text-sm md:text-lg font-black text-white uppercase tracking-tight leading-tight">
                 {heroHeadline}
               </h1>
               {heroSubtitle && (
