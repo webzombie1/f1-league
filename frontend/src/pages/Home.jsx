@@ -191,7 +191,7 @@ export default function Home() {
               )}
               <Link
                 to={latestArticle ? `/article/${latestArticle.id}` : `/race/${lastRace.id}`}
-                className="inline-flex items-center mt-5 bg-[#7ED321] hover:bg-[#6BC11A] text-[#0D1117] font-black uppercase text-sm tracking-wider px-8 py-4 rounded-lg transition-colors w-fit shadow-lg shadow-[#7ED321]/20"
+                className="inline-flex items-center mt-5 bg-[#7ED321] hover:bg-[#6BC11A] text-[#0D1117] font-black uppercase text-xs tracking-wider px-6 py-3 rounded-md transition-colors w-fit shadow-lg shadow-[#7ED321]/20"
               >
                 {latestArticle ? 'Full Story' : 'Full Results'}
               </Link>
