@@ -53,7 +53,7 @@ export default function Schedule() {
                   className="w-full h-full object-cover object-[center_55%]"
                 />
                 {race.status === 'completed' && (
-                  <div className="absolute top-2 right-2">
+                  <div className="absolute bottom-2 right-2">
                     <span className="text-xs bg-[#0D1117]/60 text-white px-2 py-0.5 rounded font-medium backdrop-blur-sm">
                       ✓ Completed
                     </span>
