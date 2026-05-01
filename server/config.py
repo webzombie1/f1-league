@@ -22,3 +22,8 @@ DATABASE_PATH = os.path.join(_DATA_DIR, "f1league.db")
 # Gemini AI
 # ---------------------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+
+# ---------------------
+# OpenAI (used for gpt-image-1 hero generation as an alternative to Gemini)
+# ---------------------
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")

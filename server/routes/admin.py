@@ -8,7 +8,7 @@ import time
 import urllib.request
 from fastapi import APIRouter, Request, UploadFile, File
 from server.db import execute, get_conn
-from server.config import GEMINI_API_KEY
+from server.config import GEMINI_API_KEY, OPENAI_API_KEY
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -867,20 +867,27 @@ async def suggest_celebration_template(race_id: int):
 @router.post("/races/{race_id}/generate-celebration-hero")
 async def generate_celebration_hero(race_id: int, request: Request):
     """Run the driver photo + template through Gemini and save a preview image."""
-    if not GEMINI_API_KEY:
-        return {"error": "GEMINI_API_KEY not configured."}
     body = await request.json()
     template_id = body.get("template_id")
     driver_id = body.get("driver_id")
     requested_model = (body.get("model") or "").strip()
-    # Allowlist the image-capable models the API key actually exposes.
-    allowed_models = {
+    # Allowlist the image-capable models. The first four go through Gemini;
+    # gpt-image-1 goes through OpenAI.
+    gemini_models = {
         "nano-banana-pro-preview",
         "gemini-3-pro-image-preview",
         "gemini-3.1-flash-image-preview",
         "gemini-2.5-flash-image",
     }
+    openai_models = {"gpt-image-1"}
+    allowed_models = gemini_models | openai_models
     model_to_use = requested_model if requested_model in allowed_models else "nano-banana-pro-preview"
+
+    is_openai = model_to_use in openai_models
+    if is_openai and not OPENAI_API_KEY:
+        return {"error": "OPENAI_API_KEY not configured."}
+    if not is_openai and not GEMINI_API_KEY:
+        return {"error": "GEMINI_API_KEY not configured."}
     if not template_id:
         return {"error": "template_id is required."}
 
@@ -1042,36 +1049,64 @@ async def generate_celebration_hero(race_id: int, request: Request):
     )
 
     try:
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        # Template (scene) first, driver references last — most image-gen models
-        # weight the trailing visual inputs more strongly for identity, so we
-        # want the driver's face to be the dominant signal.
-        contents = [
-            prompt,
-            types.Part.from_bytes(data=template_bytes, mime_type="image/png"),
-        ]
-        for b in driver_image_bytes:
-            contents.append(types.Part.from_bytes(data=b, mime_type="image/png"))
-        response = client.models.generate_content(
-            model=model_to_use,
-            contents=contents,
-            config={
-                "response_modalities": ["IMAGE", "TEXT"],
-                "image_config": {"aspect_ratio": "16:9"},
-            },
-        )
         image_bytes = None
-        for cand in response.candidates or []:
-            for part in cand.content.parts or []:
-                if getattr(part, "inline_data", None) and part.inline_data.data:
-                    image_bytes = part.inline_data.data
+        if is_openai:
+            # OpenAI gpt-image-1 takes a list of reference images via the edits
+            # endpoint. We send template first then the driver references; the
+            # prompt already calls out which is which by index.
+            import io
+            import base64
+            from openai import OpenAI
+            oai = OpenAI(api_key=OPENAI_API_KEY)
+            files = []
+            for idx, b in enumerate([template_bytes] + driver_image_bytes):
+                buf = io.BytesIO(b)
+                buf.name = f"input_{idx}.png"
+                files.append(buf)
+            result = oai.images.edit(
+                model="gpt-image-1",
+                image=files,
+                prompt=prompt,
+                size="1536x1024",  # closest available to 16:9 (1.5:1)
+                quality="high",
+            )
+            data = result.data[0]
+            if getattr(data, "b64_json", None):
+                image_bytes = base64.b64decode(data.b64_json)
+            elif getattr(data, "url", None):
+                image_bytes = urllib.request.urlopen(data.url, timeout=30).read()
+            if not image_bytes:
+                return {"error": "OpenAI did not return an image."}
+        else:
+            from google import genai
+            from google.genai import types
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            # Template (scene) first, driver references last — most image-gen
+            # models weight the trailing visual inputs more strongly for
+            # identity, so we want the driver's face to be the dominant signal.
+            contents = [
+                prompt,
+                types.Part.from_bytes(data=template_bytes, mime_type="image/png"),
+            ]
+            for b in driver_image_bytes:
+                contents.append(types.Part.from_bytes(data=b, mime_type="image/png"))
+            response = client.models.generate_content(
+                model=model_to_use,
+                contents=contents,
+                config={
+                    "response_modalities": ["IMAGE", "TEXT"],
+                    "image_config": {"aspect_ratio": "16:9"},
+                },
+            )
+            for cand in response.candidates or []:
+                for part in cand.content.parts or []:
+                    if getattr(part, "inline_data", None) and part.inline_data.data:
+                        image_bytes = part.inline_data.data
+                        break
+                if image_bytes:
                     break
-            if image_bytes:
-                break
-        if not image_bytes:
-            return {"error": "Gemini did not return an image."}
+            if not image_bytes:
+                return {"error": "Gemini did not return an image."}
 
         os.makedirs(HEROES_DIR, exist_ok=True)
         filename = f"race_{race_id}_{int(time.time())}.png"

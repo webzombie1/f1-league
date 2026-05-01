@@ -74,7 +74,8 @@ export default function ManageSchedule() {
   const [heroModel, setHeroModel] = useState('nano-banana-pro-preview')
 
   const HERO_MODELS = [
-    { id: 'nano-banana-pro-preview', label: 'Nano Banana Pro (best likeness)' },
+    { id: 'nano-banana-pro-preview', label: 'Nano Banana Pro (Gemini, default)' },
+    { id: 'gpt-image-1', label: 'GPT Image 1 (OpenAI, best for likeness)' },
     { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (alt)' },
     { id: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash (faster, cheaper)' },
     { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash (legacy)' },
