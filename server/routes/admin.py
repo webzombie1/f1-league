@@ -846,15 +846,14 @@ async def generate_celebration_hero(race_id: int, request: Request):
         )
         if circuit_note:
             venue_line += f"Iconic features to incorporate: {circuit_note} "
+    # Order of multimodal inputs matters: many image-gen models weight the
+    # LAST visual inputs more heavily for identity. Put the scene template
+    # first (so the model treats it as backdrop), then the driver references
+    # last so their face is the dominant identity signal.
     n_refs = len(driver_image_bytes)
-    refs_descriptor = (
-        f"Images 1–{n_refs} are reference portraits of the SAME driver from different "
-        "angles and expressions — use them together to lock in the face, hair, build, "
-        "and overall likeness."
-        if n_refs > 1 else
-        "Image 1 is a portrait of the driver — preserve their face, hair, and likeness."
-    )
-    template_index = n_refs + 1
+    template_index = 1
+    refs_start = 2
+    refs_end = 1 + n_refs
 
     likeness_notes = (driver.get("likeness_notes") or "").strip()
     likeness_line = (
@@ -862,13 +861,27 @@ async def generate_celebration_hero(race_id: int, request: Request):
         f"in conjunction with the reference photos): {likeness_notes}\n"
         if likeness_notes else ""
     )
+
+    refs_descriptor = (
+        f"Images {refs_start}–{refs_end} are reference portraits of the SAME driver from "
+        "different angles and expressions — use them together to lock in the face, hair, "
+        "build, and overall likeness."
+        if n_refs > 1 else
+        f"Image {refs_start} is a portrait of the driver — preserve their face, hair, and likeness."
+    )
     prompt = (
-        "You are generating an ultra-wide cinematic hero banner for a Formula 1 race "
-        "recap website. The image will be displayed as a wide banner across the top of "
-        "the page (roughly 3:1 visible area), with a dark text panel overlaid on the "
-        "LEFT THIRD of the frame.\n\n"
-        f"{refs_descriptor} {team_line}{venue_line}"
-        f"Image {template_index} is the celebration scene reference.\n\n"
+        "You are generating an ultra-wide cinematic hero banner for an amateur sim "
+        "racing league recap website. The image will be displayed as a wide banner "
+        "across the top of the page (roughly 3:1 visible area), with a dark text "
+        "panel overlaid on the LEFT THIRD of the frame.\n\n"
+        f"Image {template_index} is a SCENE / COMPOSITION reference only. Use it for the "
+        "pose, framing, environment, lighting style, and props (champagne, trophy, "
+        "podium, helmet, etc.). DO NOT copy any face from this scene reference — the "
+        "person shown in the scene reference is irrelevant to identity. Their face must "
+        "be REPLACED with the driver from the portrait references below.\n\n"
+        f"{refs_descriptor} These reference photos are the SOLE source of truth for the "
+        "person's face, hair, build, and identity.\n\n"
+        f"{team_line}{venue_line}"
         "OUTPUT FORMAT (CRITICAL):\n"
         "- Produce ONE single, seamless, continuous photograph captured from ONE camera "
         "  angle. The reference images are inputs only — DO NOT lay them out side by "
@@ -877,15 +890,26 @@ async def generate_celebration_hero(race_id: int, request: Request):
         "  horizontal seam dividing the image. The whole 16:9 frame must read as one "
         "  unbroken photograph with consistent lighting, depth of field, perspective, "
         "  and camera position throughout.\n\n"
-        "LIKENESS RULES (highest priority):\n"
-        "- The output must clearly look like the SAME PERSON shown in the driver "
-        "  reference photos. Match face shape, eye shape & colour, eyebrows, nose, "
-        "  jawline, beard/stubble pattern, and hair colour & style exactly.\n"
-        "- Do not invent generic features. If references disagree slightly, weight the "
-        "  most front-facing, well-lit one most heavily.\n"
+        "IDENTITY RULES (highest priority — read carefully):\n"
+        "- The driver in the output is NOT a real, famous, or professional Formula 1 "
+        "  driver. Do not generate Max Verstappen, Lewis Hamilton, Charles Leclerc, "
+        "  Lando Norris, or any other real-world F1 driver. Do not default to a generic "
+        "  young clean-shaven motorsport star. The person you must render is the "
+        "  specific individual shown in the portrait references — likely an everyday "
+        "  adult, possibly older, possibly bearded, possibly wearing glasses, possibly "
+        "  not athletic-looking — exactly as they appear in the references.\n"
+        f"- The output must clearly look like the SAME PERSON shown in images "
+        f"{refs_start}–{refs_end}. Match face shape, eye shape & colour, eyebrows, nose, "
+        "  jawline, beard/stubble pattern, glasses (if present), skin tone, and hair "
+        "  colour & style exactly.\n"
+        "- The face in image 1 (the scene reference) must be IGNORED and replaced by "
+        "  this person's face. Treat image 1 as a photograph from which you keep "
+        "  EVERYTHING EXCEPT the face.\n"
+        "- If the reference person doesn't look like a typical pro racing driver, that's "
+        "  fine — render them as they actually look. Do not stylise or beautify the face.\n"
         f"{likeness_line}\n"
-        f"Render this single photograph: the driver in the celebration moment described "
-        f"by the scene reference: {template['prompt']}\n\n"
+        f"Render this single photograph: this specific person in the celebration moment "
+        f"described by the scene reference: {template['prompt']}\n\n"
         "COMPOSITION RULES — read carefully, the final crop is aggressive:\n"
         "- The output is 16:9, but it will be displayed in a banner roughly 3:1 wide. "
         "  The visible band on screen is the source image rows from y=33% to y=73% "
@@ -918,10 +942,15 @@ async def generate_celebration_hero(race_id: int, request: Request):
         from google import genai
         from google.genai import types
         client = genai.Client(api_key=GEMINI_API_KEY)
-        contents = [prompt]
+        # Template (scene) first, driver references last — most image-gen models
+        # weight the trailing visual inputs more strongly for identity, so we
+        # want the driver's face to be the dominant signal.
+        contents = [
+            prompt,
+            types.Part.from_bytes(data=template_bytes, mime_type="image/png"),
+        ]
         for b in driver_image_bytes:
             contents.append(types.Part.from_bytes(data=b, mime_type="image/png"))
-        contents.append(types.Part.from_bytes(data=template_bytes, mime_type="image/png"))
         response = client.models.generate_content(
             model=model_to_use,
             contents=contents,
