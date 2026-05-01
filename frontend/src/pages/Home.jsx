@@ -169,7 +169,7 @@ export default function Home() {
       {/* ── Hero Section ── */}
       <div className="relative w-full h-[420px] overflow-hidden">
         <div
-          className="absolute inset-0 bg-cover bg-[center_30%]"
+          className="absolute inset-0 bg-cover bg-[center_55%]"
           style={{ backgroundImage: `url(${heroImage})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0D1117] via-[#0D1117]/60 to-transparent" />
