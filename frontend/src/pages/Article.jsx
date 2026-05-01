@@ -24,14 +24,15 @@ export default function Article() {
 
   return (
     <div>
-      {/* Hero image — prefer the race's generated celebration hero */}
+      {/* Hero image — prefer the race's generated celebration hero. Constrained
+          width with natural 16:9 aspect so the whole image is visible. */}
       {(article.race_hero_image || article.hero_image) && (
-        <div className="relative w-full h-[300px] overflow-hidden">
-          <div
-            className="absolute inset-0 bg-cover bg-[center_55%]"
-            style={{ backgroundImage: `url(${article.race_hero_image || article.hero_image})` }}
+        <div className="max-w-4xl mx-auto px-4 pt-6">
+          <img
+            src={article.race_hero_image || article.hero_image}
+            alt=""
+            className="w-full aspect-[16/9] object-cover rounded-xl"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0D1117] via-[#0D1117]/40 to-transparent" />
         </div>
       )}
 
