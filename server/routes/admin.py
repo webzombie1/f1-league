@@ -720,7 +720,7 @@ async def generate_celebration_hero(race_id: int, request: Request):
         from google.genai import types
         client = genai.Client(api_key=GEMINI_API_KEY)
         response = client.models.generate_content(
-            model="gemini-2.5-flash-image-preview",
+            model="gemini-3.1-flash-image-preview",
             contents=[
                 prompt,
                 types.Part.from_bytes(data=driver_bytes, mime_type="image/png"),
