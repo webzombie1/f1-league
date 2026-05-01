@@ -585,6 +585,109 @@ async def delete_celebration_template(template_id: int):
     return {"status": "deleted"}
 
 
+@router.post("/celebration-templates/{template_id}/trim-face")
+async def trim_celebration_template_face(template_id: int):
+    """Use Gemini to obscure the human face in a template's reference image so
+    it can't bias hero generation. The original image is preserved alongside
+    the trimmed version as <name>.original.<ext>; a second call to this
+    endpoint replaces the face on the trimmed image again, but the .original
+    backup is created only the first time so you can always revert."""
+    if not GEMINI_API_KEY:
+        return {"error": "GEMINI_API_KEY not configured."}
+    template = execute(
+        "SELECT * FROM celebration_templates WHERE id = ?", (template_id,), fetch="one"
+    )
+    if not template or not template.get("image_path"):
+        return {"error": "Template has no image to trim."}
+
+    image_bytes = _load_image_bytes(template["image_path"])
+    if not image_bytes:
+        return {"error": "Couldn't load the template image."}
+
+    prompt = (
+        "Edit this photograph so no human face is recognizable. Keep EVERYTHING else "
+        "exactly the same — pose, body posture, race suit, team colours, helmet, "
+        "trophies, champagne bottles, podium structures, signage, crowd, lighting, "
+        "camera angle, background, and overall composition. Only change the face: "
+        "replace each visible face with one of these options that fits the pose — \n"
+        "(a) the helmet still on with the visor down (preferred when the body is in "
+        "  driving / parc-fermé pose),\n"
+        "(b) the head turned fully away from the camera so the face isn't visible,\n"
+        "(c) the head cropped or dissolved into motion blur such that there is no "
+        "  recognizable face but the body remains.\n"
+        "Pick whichever looks most natural. The output must be a single photorealistic "
+        "image at the same aspect ratio as the input. Do NOT swap the face for a "
+        "different person's face — there should be no specific identifiable face at all."
+    )
+
+    try:
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model="nano-banana-pro-preview",
+            contents=[
+                prompt,
+                types.Part.from_bytes(data=image_bytes, mime_type="image/png"),
+            ],
+            config={"response_modalities": ["IMAGE", "TEXT"]},
+        )
+        out_bytes = None
+        for cand in response.candidates or []:
+            for part in cand.content.parts or []:
+                if getattr(part, "inline_data", None) and part.inline_data.data:
+                    out_bytes = part.inline_data.data
+                    break
+            if out_bytes:
+                break
+        if not out_bytes:
+            return {"error": "Gemini did not return an image."}
+
+        rel = template["image_path"].lstrip("/")
+        if os.path.isdir("/data"):
+            target = os.path.join("/data", rel)
+        else:
+            base = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public")
+            target = os.path.join(base, rel)
+        if not os.path.isfile(target):
+            return {"error": "Template file missing on disk."}
+
+        # Back up the original the first time we trim, so the user can revert.
+        root, ext = os.path.splitext(target)
+        backup = f"{root}.original{ext}"
+        if not os.path.isfile(backup):
+            shutil.copyfile(target, backup)
+
+        with open(target, "wb") as f:
+            f.write(out_bytes)
+        return {"status": "trimmed", "image_path": template["image_path"]}
+    except Exception as e:
+        logger.exception("Template face trim failed")
+        return {"error": f"Trim failed: {str(e)}"}
+
+
+@router.post("/celebration-templates/{template_id}/restore-original")
+async def restore_celebration_template_original(template_id: int):
+    """Revert a trimmed template back to the original uploaded image."""
+    template = execute(
+        "SELECT image_path FROM celebration_templates WHERE id = ?", (template_id,), fetch="one"
+    )
+    if not template or not template.get("image_path"):
+        return {"error": "Template has no image."}
+    rel = template["image_path"].lstrip("/")
+    if os.path.isdir("/data"):
+        target = os.path.join("/data", rel)
+    else:
+        base = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "public")
+        target = os.path.join(base, rel)
+    root, ext = os.path.splitext(target)
+    backup = f"{root}.original{ext}"
+    if not os.path.isfile(backup):
+        return {"error": "No original backup exists for this template."}
+    shutil.copyfile(backup, target)
+    return {"status": "restored", "image_path": template["image_path"]}
+
+
 @router.post("/celebration-templates/{template_id}/image")
 async def upload_celebration_template_image(template_id: int, file: UploadFile = File(...)):
     template = execute("SELECT id FROM celebration_templates WHERE id = ?", (template_id,), fetch="one")

@@ -61,6 +61,25 @@ export default function ManageCelebrationTemplates() {
     load()
   }
 
+  const [trimmingId, setTrimmingId] = useState(null)
+  const trimFace = async (templateId) => {
+    setTrimmingId(templateId)
+    try {
+      const res = await post(`/admin/celebration-templates/${templateId}/trim-face`, {})
+      if (res?.error) alert(res.error)
+    } catch (e) {
+      alert(e.message || 'Trim failed.')
+    }
+    setTrimmingId(null)
+    load()
+  }
+  const restoreOriginal = async (templateId) => {
+    if (!confirm('Restore the original uploaded image for this template?')) return
+    const res = await post(`/admin/celebration-templates/${templateId}/restore-original`, {})
+    if (res?.error) alert(res.error)
+    load()
+  }
+
   const inputCls = "w-full bg-[#111111] border border-[#1F1F1F] rounded px-2 py-1 text-sm text-[#E8ECF4] focus:outline-none focus:border-[#7ED321]"
   const btnPrimary = "cursor-pointer bg-gradient-to-b from-[#7ED321] to-[#5BA318] border border-[#8EE835] text-[#0D1117] font-bold uppercase text-xs tracking-wider px-4 py-2 rounded transition-all"
   const btnSecondary = "cursor-pointer bg-gradient-to-b from-[#1F1F1F] to-[#191919] border border-[#383838] text-[#999999] font-bold uppercase text-xs tracking-wider px-4 py-2 rounded hover:text-[#E8ECF4] hover:border-[#777777] transition-all"
@@ -102,6 +121,25 @@ export default function ManageCelebrationTemplates() {
                     onChange={e => e.target.files[0] && uploadImage(t.id, e.target.files[0])}
                   />
                 </label>
+                {t.image_path && (
+                  <div className="absolute bottom-2 left-2 flex gap-1">
+                    <button
+                      onClick={() => trimFace(t.id)}
+                      disabled={trimmingId === t.id}
+                      className="bg-black/70 hover:bg-black text-[#7ED321] text-xs uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Use Gemini to obscure the face in this template so it doesn't bias hero generation"
+                    >
+                      {trimmingId === t.id ? 'Trimming…' : 'Trim Face'}
+                    </button>
+                    <button
+                      onClick={() => restoreOriginal(t.id)}
+                      className="bg-black/70 hover:bg-black text-[#999] text-xs uppercase tracking-wider px-3 py-1.5 rounded cursor-pointer"
+                      title="Revert to the original uploaded image"
+                    >
+                      Restore
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="p-4 space-y-3">
                 {isEditing ? (
