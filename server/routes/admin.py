@@ -1053,15 +1053,24 @@ async def generate_celebration_hero(race_id: int, request: Request):
         if is_openai:
             # OpenAI gpt-image-1 takes a list of reference images via the edits
             # endpoint. We send template first then the driver references; the
-            # prompt already calls out which is which by index.
+            # prompt already calls out which is which by index. The endpoint
+            # uses the filename extension to infer MIME type, so detect each
+            # buffer's actual format from its magic bytes.
             import io
             import base64
             from openai import OpenAI
+
+            def _ext_for(b: bytes) -> str:
+                if b[:8] == b"\x89PNG\r\n\x1a\n": return "png"
+                if b[:2] == b"\xff\xd8": return "jpg"
+                if len(b) >= 12 and b[:4] == b"RIFF" and b[8:12] == b"WEBP": return "webp"
+                return "png"
+
             oai = OpenAI(api_key=OPENAI_API_KEY)
             files = []
             for idx, b in enumerate([template_bytes] + driver_image_bytes):
                 buf = io.BytesIO(b)
-                buf.name = f"input_{idx}.png"
+                buf.name = f"input_{idx}.{_ext_for(b)}"
                 files.append(buf)
             result = oai.images.edit(
                 model="gpt-image-1",
