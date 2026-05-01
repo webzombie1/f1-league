@@ -70,12 +70,20 @@ export default function ManageSchedule() {
   const [heroGenerating, setHeroGenerating] = useState(false)
   const [heroError, setHeroError] = useState('')
   const [heroJustGeneratedId, setHeroJustGeneratedId] = useState(null)
+  const [heroSelectedId, setHeroSelectedId] = useState(null)
 
   const refreshCandidates = async (raceId) => {
     const res = await get(`/admin/races/${raceId}/hero-candidates`).catch(() => null)
     if (res) {
-      setHeroCandidates(res.candidates || [])
+      const candidates = res.candidates || []
+      setHeroCandidates(candidates)
       setHeroActive(res.active_hero_image || '')
+      // If the currently-selected thumbnail was deleted, fall back to active or newest.
+      setHeroSelectedId(prev => {
+        if (prev && candidates.some(c => c.id === prev)) return prev
+        const activeMatch = candidates.find(c => c.image_path === (res.active_hero_image || ''))
+        return activeMatch?.id ?? (candidates[0]?.id ?? null)
+      })
     }
   }
 
@@ -85,6 +93,7 @@ export default function ManageSchedule() {
     setHeroCandidates([])
     setHeroActive(race.hero_image || '')
     setHeroJustGeneratedId(null)
+    setHeroSelectedId(null)
     const [templates, suggestion] = await Promise.all([
       get('/admin/celebration-templates'),
       get(`/admin/races/${race.id}/celebration-suggestion`).catch(() => null),
@@ -114,6 +123,8 @@ export default function ManageSchedule() {
       } else {
         await refreshCandidates(heroModalRace.id)
         setHeroJustGeneratedId(res.candidate_id || null)
+        // Auto-select the new candidate so it shows in the large preview.
+        if (res.candidate_id) setHeroSelectedId(res.candidate_id)
       }
     } catch (e) {
       setHeroError(e.message || 'Generation failed.')
@@ -742,9 +753,12 @@ export default function ManageSchedule() {
       </div>
 
       {/* Celebration hero modal */}
-      {heroModalRace && (
+      {heroModalRace && (() => {
+        const selected = heroCandidates.find(c => c.id === heroSelectedId)
+        const previewIsActive = selected && heroActive === selected.image_path
+        return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 overflow-y-auto" onClick={closeHeroModal}>
-          <div className="w-full max-w-4xl my-8 bg-[#111111] border border-[#1F1F1F] rounded-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-5xl my-8 bg-[#111111] border border-[#1F1F1F] rounded-xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-4 border-b border-[#1F1F1F] flex items-center justify-between">
               <div>
                 <h3 className="text-base font-bold text-[#E8ECF4]">Hero candidates</h3>
@@ -755,130 +769,161 @@ export default function ManageSchedule() {
               <button onClick={closeHeroModal} className="text-[#999999] hover:text-white text-2xl leading-none cursor-pointer">×</button>
             </div>
 
-            <div className="p-5 space-y-4">
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Celebration template</label>
-                  <select
-                    value={heroTemplateId || ''}
-                    onChange={e => setHeroTemplateId(parseInt(e.target.value) || null)}
-                    className="w-full bg-[#0D1117] border border-[#1F1F1F] rounded px-2 py-2 text-sm text-[#E8ECF4]"
+            <div className="p-5 flex gap-5">
+              {/* Left column — controls + large preview */}
+              <div className="flex-1 min-w-0 space-y-3">
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Celebration template</label>
+                    <select
+                      value={heroTemplateId || ''}
+                      onChange={e => setHeroTemplateId(parseInt(e.target.value) || null)}
+                      className="w-full bg-[#0D1117] border border-[#1F1F1F] rounded px-2 py-2 text-sm text-[#E8ECF4]"
+                    >
+                      {heroTemplates.length === 0 ? (
+                        <option value="">No active templates with images</option>
+                      ) : (
+                        heroTemplates.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                  {heroPodiumTag && (
+                    <span className="text-[10px] uppercase tracking-wider bg-[#7ED321]/15 text-[#7ED321] px-2 py-1 rounded">
+                      Suggested: {heroPodiumTag}
+                    </span>
+                  )}
+                  <button
+                    onClick={generateHero}
+                    disabled={heroGenerating || !heroTemplateId}
+                    className={btnPrimary}
                   >
-                    {heroTemplates.length === 0 ? (
-                      <option value="">No active templates with images</option>
-                    ) : (
-                      heroTemplates.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))
-                    )}
-                  </select>
+                    {heroGenerating ? 'Generating…' : '+ Generate'}
+                  </button>
                 </div>
-                {heroPodiumTag && (
-                  <span className="text-[10px] uppercase tracking-wider bg-[#7ED321]/15 text-[#7ED321] px-2 py-1 rounded">
-                    Suggested: {heroPodiumTag}
-                  </span>
+
+                {heroError && (
+                  <p className="text-xs text-red-400">{heroError}</p>
                 )}
-                <button
-                  onClick={generateHero}
-                  disabled={heroGenerating || !heroTemplateId}
-                  className={btnPrimary}
-                >
-                  {heroGenerating ? 'Generating…' : '+ Generate'}
-                </button>
+
+                {heroJustGeneratedId && !heroGenerating && (
+                  <div className="bg-[#7ED321]/10 border border-[#7ED321]/40 rounded px-3 py-2 text-xs text-[#7ED321] flex items-center justify-between">
+                    <span>✓ New candidate ready — click <strong>Use this image</strong> below to set it as the race hero.</span>
+                    <button
+                      onClick={() => setHeroJustGeneratedId(null)}
+                      className="text-[#7ED321] hover:text-white text-base leading-none cursor-pointer ml-3"
+                      title="Dismiss"
+                    >×</button>
+                  </div>
+                )}
+
+                {/* Large preview */}
+                <div className="aspect-[16/9] bg-[#0D1117] border border-[#1F1F1F] rounded overflow-hidden flex items-center justify-center relative">
+                  {heroGenerating ? (
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-10 h-10 border-3 border-[#1F1F1F] border-t-[#7ED321] rounded-full animate-spin" />
+                      <p className="text-sm text-[#999999]">Generating… 20–40s with the pro model.</p>
+                    </div>
+                  ) : selected ? (
+                    <img src={selected.image_path} alt="" className="w-full h-full object-cover" />
+                  ) : heroActive ? (
+                    <img src={heroActive} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <p className="text-[#555] text-xs uppercase tracking-wider">
+                      Pick a template and click Generate to create your first candidate
+                    </p>
+                  )}
+                </div>
+
+                {/* Preview caption + actions */}
+                {selected && !heroGenerating && (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm text-[#E8ECF4] truncate">
+                        {selected.template_name || 'Custom'}
+                        {selected.driver_name ? <span className="text-[#777777]"> · {selected.driver_name}</span> : null}
+                      </p>
+                      {previewIsActive && (
+                        <p className="text-[10px] uppercase tracking-wider text-[#7ED321] font-bold mt-0.5">In use as race hero</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => deleteCandidate(selected.id)}
+                        className={btnSecondary}
+                      >Delete</button>
+                      <button
+                        onClick={() => useCandidate(selected.image_path)}
+                        disabled={previewIsActive}
+                        className={`${btnPrimary} disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {previewIsActive ? 'In use' : 'Use this image'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {heroError && (
-                <p className="text-xs text-red-400">{heroError}</p>
-              )}
-
-              {heroJustGeneratedId && !heroGenerating && (
-                <div className="bg-[#7ED321]/10 border border-[#7ED321]/40 rounded px-3 py-2 text-xs text-[#7ED321] flex items-center justify-between">
-                  <span>✓ New candidate ready — click <strong>Use</strong> on the highlighted card to set it as the race hero.</span>
-                  <button
-                    onClick={() => setHeroJustGeneratedId(null)}
-                    className="text-[#7ED321] hover:text-white text-base leading-none cursor-pointer ml-3"
-                    title="Dismiss"
-                  >×</button>
+              {/* Right column — vertical thumbnail rail */}
+              <div className="w-48 shrink-0 flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[10px] font-bold uppercase tracking-wider text-[#999999]">Saved</h4>
+                  <span className="text-[10px] text-[#777777]">{heroCandidates.length}</span>
                 </div>
-              )}
-
-              {heroGenerating && (
-                <div className="aspect-[16/9] bg-[#0D1117] border border-[#1F1F1F] rounded flex items-center justify-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 border-3 border-[#1F1F1F] border-t-[#7ED321] rounded-full animate-spin" />
-                    <p className="text-sm text-[#999999]">Generating… 20–40s with the pro model.</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Candidates gallery */}
-              {heroCandidates.length === 0 && !heroGenerating ? (
-                <div className="bg-[#0D1117] border border-[#1F1F1F] rounded p-8 text-center">
-                  <p className="text-[#777777] text-sm">
-                    No saved generations yet. Pick a template and click Generate to add one.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {heroCandidates.map(c => {
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1" style={{ maxHeight: '480px' }}>
+                  {heroCandidates.length === 0 ? (
+                    <p className="text-[11px] text-[#555] leading-relaxed">
+                      No saved generations yet.
+                    </p>
+                  ) : heroCandidates.map(c => {
+                    const isSelected = heroSelectedId === c.id
                     const isActive = heroActive === c.image_path
                     const isJustGenerated = heroJustGeneratedId === c.id
                     return (
-                      <div
+                      <button
                         key={c.id}
-                        className={`relative rounded-lg overflow-hidden border-2 transition-colors ${
-                          isActive
+                        onClick={() => setHeroSelectedId(c.id)}
+                        className={`relative w-full aspect-[16/9] rounded overflow-hidden border-2 transition-colors cursor-pointer block ${
+                          isSelected
                             ? 'border-[#7ED321]'
                             : isJustGenerated
-                              ? 'border-[#7ED321]/70 shadow-[0_0_24px_rgba(126,211,33,0.35)]'
-                              : 'border-[#1F1F1F] hover:border-[#383838]'
+                              ? 'border-[#7ED321]/70 shadow-[0_0_16px_rgba(126,211,33,0.35)]'
+                              : 'border-[#1F1F1F] hover:border-[#555]'
                         }`}
                       >
-                        {isJustGenerated && !isActive && (
-                          <div className="absolute top-2 left-2 z-10 text-[10px] uppercase tracking-wider bg-[#7ED321] text-[#0D1117] font-black px-2 py-0.5 rounded">
-                            Just generated
-                          </div>
+                        <img src={c.image_path} alt="" className="w-full h-full object-cover" />
+                        {isActive && (
+                          <span className="absolute top-1 left-1 text-[9px] uppercase tracking-wider bg-[#7ED321] text-[#0D1117] font-black px-1.5 py-0.5 rounded">
+                            In use
+                          </span>
                         )}
-                        <div className="aspect-[16/9] bg-[#0D1117]">
-                          <img src={c.image_path} alt="" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="px-3 py-2 bg-[#191919] flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs text-[#E8ECF4] truncate">
-                              {c.template_name || 'Custom'}
-                              {c.driver_name ? <span className="text-[#777777]"> · {c.driver_name}</span> : null}
-                            </p>
-                            {isActive && (
-                              <p className="text-[10px] uppercase tracking-wider text-[#7ED321] font-bold">In use</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {!isActive && (
-                              <button
-                                onClick={() => useCandidate(c.image_path)}
-                                className="text-[10px] uppercase tracking-wider bg-[#7ED321] text-[#0D1117] font-bold px-2 py-1 rounded hover:bg-[#6BC11A] cursor-pointer"
-                              >Use</button>
-                            )}
-                            <button
-                              onClick={() => deleteCandidate(c.id)}
-                              className="text-[#999999] hover:text-red-400 text-base leading-none cursor-pointer w-5 h-5 flex items-center justify-center"
-                              title="Delete"
-                            >×</button>
-                          </div>
-                        </div>
-                      </div>
+                        {isJustGenerated && !isActive && (
+                          <span className="absolute top-1 left-1 text-[9px] uppercase tracking-wider bg-[#7ED321] text-[#0D1117] font-black px-1.5 py-0.5 rounded">
+                            New
+                          </span>
+                        )}
+                        <span
+                          onClick={(e) => { e.stopPropagation(); deleteCandidate(c.id) }}
+                          role="button"
+                          tabIndex={0}
+                          className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-black/70 hover:bg-red-500/80 text-white text-xs leading-none cursor-pointer rounded"
+                          title="Delete"
+                        >×</span>
+                      </button>
                     )
                   })}
                 </div>
-              )}
-
-              <div className="flex gap-2 justify-end pt-1">
-                <button onClick={closeHeroModal} className={btnSecondary}>Done</button>
               </div>
+            </div>
+
+            <div className="px-5 py-3 border-t border-[#1F1F1F] flex justify-end">
+              <button onClick={closeHeroModal} className={btnSecondary}>Done</button>
             </div>
           </div>
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
