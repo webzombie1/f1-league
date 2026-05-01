@@ -886,10 +886,13 @@ async def generate_celebration_hero(race_id: int, request: Request):
         "  venue signage, crowd faces — must sit fully within y=33%–73% of the "
         "  source. Anything outside that band is decorative and will be cropped.\n"
         "- The driver sits roughly in the RIGHT HALF of the frame.\n"
-        "- The LEFT THIRD is the SAME continuous scene (crowd, sky, grandstand) but "
-        "  quieter and lower-contrast (atmospheric perspective, motion blur, soft "
-        "  bokeh) so a dark text panel can overlay it. It must visually belong to "
-        "  the same scene as the right side — not a separate photo.\n"
+        "- The full image must be one consistent, sharply rendered photograph end to "
+        "  end. Do NOT add fake blur, vignettes, or low-contrast washes anywhere — "
+        "  the left side of the frame must be the same level of sharpness and detail "
+        "  as the right side. A dark UI panel will be overlaid on top of part of the "
+        "  image at display time, so you do not need to leave the left side empty or "
+        "  quiet — fill it with normal scene content (crowd, grandstand, track, sky, "
+        "  flags) at full fidelity.\n"
         "- Photorealistic, crisp focus on the driver, cinematic lighting, 16:9. One "
         "  photograph, one moment, one camera."
     )
@@ -903,7 +906,7 @@ async def generate_celebration_hero(race_id: int, request: Request):
             contents.append(types.Part.from_bytes(data=b, mime_type="image/png"))
         contents.append(types.Part.from_bytes(data=template_bytes, mime_type="image/png"))
         response = client.models.generate_content(
-            model="gemini-3-pro-image-preview",
+            model="nano-banana-pro-preview",
             contents=contents,
             config={
                 "response_modalities": ["IMAGE", "TEXT"],
@@ -926,8 +929,15 @@ async def generate_celebration_hero(race_id: int, request: Request):
         filepath = os.path.join(HEROES_DIR, filename)
         with open(filepath, "wb") as f:
             f.write(image_bytes)
+        image_path = f"/celebration_heroes/{filename}"
+        candidate_id = execute(
+            """INSERT INTO race_hero_candidates (race_id, image_path, template_id, driver_id)
+               VALUES (?, ?, ?, ?)""",
+            (race_id, image_path, template_id, driver["id"]), fetch="none"
+        )
         return {
-            "preview_path": f"/celebration_heroes/{filename}",
+            "candidate_id": candidate_id,
+            "image_path": image_path,
             "driver_name": driver["name"],
         }
     except Exception as e:
@@ -944,6 +954,49 @@ async def commit_hero_image(race_id: int, request: Request):
         return {"error": "image_path is required."}
     execute("UPDATE races SET hero_image = ? WHERE id = ?", (image_path, race_id), fetch="none")
     return {"status": "updated", "hero_image": image_path}
+
+
+@router.get("/races/{race_id}/hero-candidates")
+async def list_hero_candidates(race_id: int):
+    """List saved generations for a race, plus the currently-active hero path."""
+    race = execute("SELECT hero_image FROM races WHERE id = ?", (race_id,), fetch="one")
+    candidates = execute(
+        """SELECT c.id, c.image_path, c.template_id, c.driver_id, c.created_at,
+                  t.name AS template_name, d.name AS driver_name
+           FROM race_hero_candidates c
+           LEFT JOIN celebration_templates t ON c.template_id = t.id
+           LEFT JOIN drivers d ON c.driver_id = d.id
+           WHERE c.race_id = ?
+           ORDER BY c.created_at DESC, c.id DESC""",
+        (race_id,)
+    )
+    return {
+        "active_hero_image": (race or {}).get("hero_image", ""),
+        "candidates": candidates,
+    }
+
+
+@router.delete("/races/hero-candidates/{candidate_id}")
+async def delete_hero_candidate(candidate_id: int):
+    """Remove a saved candidate. Clears the race's active hero if it pointed here."""
+    row = execute("SELECT race_id, image_path FROM race_hero_candidates WHERE id = ?", (candidate_id,), fetch="one")
+    if not row:
+        return {"status": "not_found"}
+    execute("DELETE FROM race_hero_candidates WHERE id = ?", (candidate_id,), fetch="none")
+    # If the active hero pointed at this candidate, clear it.
+    execute(
+        "UPDATE races SET hero_image = '' WHERE id = ? AND hero_image = ?",
+        (row["race_id"], row["image_path"]), fetch="none"
+    )
+    candidate = row["image_path"] or ""
+    if candidate:
+        local = os.path.join("/data", candidate.lstrip("/")) if os.path.isdir("/data") else None
+        if local and os.path.isfile(local):
+            try:
+                os.remove(local)
+            except OSError:
+                pass
+    return {"status": "deleted"}
 
 
 # ─── Highlights ─────────────────────────────────────────────────────

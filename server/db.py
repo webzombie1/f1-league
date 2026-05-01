@@ -159,6 +159,16 @@ CREATE TABLE IF NOT EXISTS driver_reference_photos (
     created_at      TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS race_hero_candidates (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    race_id         INTEGER NOT NULL,
+    image_path      TEXT NOT NULL,
+    template_id     INTEGER,
+    driver_id       INTEGER,
+    created_at      TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE
+);
 """
 
 
