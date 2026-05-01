@@ -69,6 +69,7 @@ export default function ManageSchedule() {
   const [heroActive, setHeroActive] = useState('')
   const [heroGenerating, setHeroGenerating] = useState(false)
   const [heroError, setHeroError] = useState('')
+  const [heroJustGeneratedId, setHeroJustGeneratedId] = useState(null)
 
   const refreshCandidates = async (raceId) => {
     const res = await get(`/admin/races/${raceId}/hero-candidates`).catch(() => null)
@@ -83,6 +84,7 @@ export default function ManageSchedule() {
     setHeroError('')
     setHeroCandidates([])
     setHeroActive(race.hero_image || '')
+    setHeroJustGeneratedId(null)
     const [templates, suggestion] = await Promise.all([
       get('/admin/celebration-templates'),
       get(`/admin/races/${race.id}/celebration-suggestion`).catch(() => null),
@@ -111,6 +113,7 @@ export default function ManageSchedule() {
         setHeroError(res.error)
       } else {
         await refreshCandidates(heroModalRace.id)
+        setHeroJustGeneratedId(res.candidate_id || null)
       }
     } catch (e) {
       setHeroError(e.message || 'Generation failed.')
@@ -788,6 +791,17 @@ export default function ManageSchedule() {
                 <p className="text-xs text-red-400">{heroError}</p>
               )}
 
+              {heroJustGeneratedId && !heroGenerating && (
+                <div className="bg-[#7ED321]/10 border border-[#7ED321]/40 rounded px-3 py-2 text-xs text-[#7ED321] flex items-center justify-between">
+                  <span>✓ New candidate ready — click <strong>Use</strong> on the highlighted card to set it as the race hero.</span>
+                  <button
+                    onClick={() => setHeroJustGeneratedId(null)}
+                    className="text-[#7ED321] hover:text-white text-base leading-none cursor-pointer ml-3"
+                    title="Dismiss"
+                  >×</button>
+                </div>
+              )}
+
               {heroGenerating && (
                 <div className="aspect-[16/9] bg-[#0D1117] border border-[#1F1F1F] rounded flex items-center justify-center">
                   <div className="flex flex-col items-center gap-3">
@@ -808,13 +822,23 @@ export default function ManageSchedule() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {heroCandidates.map(c => {
                     const isActive = heroActive === c.image_path
+                    const isJustGenerated = heroJustGeneratedId === c.id
                     return (
                       <div
                         key={c.id}
                         className={`relative rounded-lg overflow-hidden border-2 transition-colors ${
-                          isActive ? 'border-[#7ED321]' : 'border-[#1F1F1F] hover:border-[#383838]'
+                          isActive
+                            ? 'border-[#7ED321]'
+                            : isJustGenerated
+                              ? 'border-[#7ED321]/70 shadow-[0_0_24px_rgba(126,211,33,0.35)]'
+                              : 'border-[#1F1F1F] hover:border-[#383838]'
                         }`}
                       >
+                        {isJustGenerated && !isActive && (
+                          <div className="absolute top-2 left-2 z-10 text-[10px] uppercase tracking-wider bg-[#7ED321] text-[#0D1117] font-black px-2 py-0.5 rounded">
+                            Just generated
+                          </div>
+                        )}
                         <div className="aspect-[16/9] bg-[#0D1117]">
                           <img src={c.image_path} alt="" className="w-full h-full object-cover" />
                         </div>
