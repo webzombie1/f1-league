@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS drivers (
     discord_url     TEXT DEFAULT '',
     ai_substitute_id INTEGER,
     is_ai           INTEGER DEFAULT 0,
+    likeness_notes  TEXT DEFAULT '',
     is_active       INTEGER DEFAULT 1,
     FOREIGN KEY (season_id) REFERENCES seasons(id) ON DELETE CASCADE,
     FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
@@ -166,6 +167,7 @@ CREATE TABLE IF NOT EXISTS race_hero_candidates (
     image_path      TEXT NOT NULL,
     template_id     INTEGER,
     driver_id       INTEGER,
+    model           TEXT DEFAULT '',
     created_at      TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (race_id) REFERENCES races(id) ON DELETE CASCADE
 );
@@ -225,6 +227,8 @@ def init_db():
         ("drivers", "discord_url", "TEXT DEFAULT ''"),
         ("drivers", "ai_substitute_id", "INTEGER"),
         ("drivers", "is_ai", "INTEGER DEFAULT 0"),
+        ("drivers", "likeness_notes", "TEXT DEFAULT ''"),
+        ("race_hero_candidates", "model", "TEXT DEFAULT ''"),
         ("seasons", "season_start", "TEXT DEFAULT ''"),
         ("seasons", "race_day", "INTEGER DEFAULT 3"),
         ("seasons", "race_time", "TEXT DEFAULT '20:00'"),

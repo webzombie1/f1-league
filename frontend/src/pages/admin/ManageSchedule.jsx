@@ -71,6 +71,15 @@ export default function ManageSchedule() {
   const [heroError, setHeroError] = useState('')
   const [heroJustGeneratedId, setHeroJustGeneratedId] = useState(null)
   const [heroSelectedId, setHeroSelectedId] = useState(null)
+  const [heroModel, setHeroModel] = useState('nano-banana-pro-preview')
+
+  const HERO_MODELS = [
+    { id: 'nano-banana-pro-preview', label: 'Nano Banana Pro (best likeness)' },
+    { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (alt)' },
+    { id: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash (faster, cheaper)' },
+    { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash (legacy)' },
+  ]
+  const modelLabel = (id) => HERO_MODELS.find(m => m.id === id)?.label.split(' (')[0] || id
 
   const refreshCandidates = async (raceId) => {
     const res = await get(`/admin/races/${raceId}/hero-candidates`).catch(() => null)
@@ -117,6 +126,7 @@ export default function ManageSchedule() {
     try {
       const res = await post(`/admin/races/${heroModalRace.id}/generate-celebration-hero`, {
         template_id: heroTemplateId,
+        model: heroModel,
       })
       if (res.error) {
         setHeroError(res.error)
@@ -772,8 +782,8 @@ export default function ManageSchedule() {
             <div className="p-5 flex gap-5">
               {/* Left column — controls + large preview */}
               <div className="flex-1 min-w-0 space-y-3">
-                <div className="flex items-end gap-3">
-                  <div className="flex-1">
+                <div className="flex items-end gap-3 flex-wrap">
+                  <div className="flex-1 min-w-[180px]">
                     <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Celebration template</label>
                     <select
                       value={heroTemplateId || ''}
@@ -787,6 +797,18 @@ export default function ManageSchedule() {
                           <option key={t.id} value={t.id}>{t.name}</option>
                         ))
                       )}
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[180px]">
+                    <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Model</label>
+                    <select
+                      value={heroModel}
+                      onChange={e => setHeroModel(e.target.value)}
+                      className="w-full bg-[#0D1117] border border-[#1F1F1F] rounded px-2 py-2 text-sm text-[#E8ECF4]"
+                    >
+                      {HERO_MODELS.map(m => (
+                        <option key={m.id} value={m.id}>{m.label}</option>
+                      ))}
                     </select>
                   </div>
                   {heroPodiumTag && (
@@ -843,6 +865,9 @@ export default function ManageSchedule() {
                       <p className="text-sm text-[#E8ECF4] truncate">
                         {selected.template_name || 'Custom'}
                         {selected.driver_name ? <span className="text-[#777777]"> · {selected.driver_name}</span> : null}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-[#777777] mt-0.5">
+                        {selected.model ? modelLabel(selected.model) : 'Unknown model'}
                       </p>
                       {previewIsActive && (
                         <p className="text-[10px] uppercase tracking-wider text-[#7ED321] font-bold mt-0.5">In use as race hero</p>

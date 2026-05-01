@@ -31,6 +31,7 @@ export default function ManageDrivers() {
       discord_name: d.discord_name || '', discord_url: d.discord_url || '',
       ai_substitute_id: d.ai_substitute_id || '',
       is_ai: d.is_ai || 0,
+      likeness_notes: d.likeness_notes || '',
     })
     loadRefPhotos(d.id)
   }
@@ -337,6 +338,19 @@ export default function ManageDrivers() {
                       </select>
                     </div>
                   )}
+                </div>
+                <div>
+                  <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">
+                    Likeness Notes
+                    <span className="text-[#777777] normal-case tracking-normal ml-2">— used in AI hero generation; describe distinctive features in plain English</span>
+                  </label>
+                  <textarea
+                    value={editData.likeness_notes}
+                    onChange={e => setEditData({...editData, likeness_notes: e.target.value})}
+                    rows={3}
+                    placeholder="e.g. mid-40s man, full beard with grey flecks, dark-rimmed glasses, dark hair slightly receding, stocky build"
+                    className={inputCls}
+                  />
                 </div>
                 <div className="flex gap-3 pt-2">
                   <button onClick={saveEdit} className="cursor-pointer bg-gradient-to-b from-[#7ED321] to-[#5BA318] border border-[#8EE835] text-[#0D1117] font-bold uppercase text-xs tracking-wider px-5 py-2 rounded transition-all">Save Changes</button>

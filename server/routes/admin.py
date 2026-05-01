@@ -162,7 +162,7 @@ async def update_driver(driver_id: int, request: Request):
     updates = []
     params = []
 
-    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url", "photo_standing", "ea_tag", "platform", "discord_name", "discord_url", "ai_substitute_id", "is_ai"):
+    for field in ("name", "abbreviation", "number", "team_id", "is_active", "photo_url", "photo_standing", "ea_tag", "platform", "discord_name", "discord_url", "ai_substitute_id", "is_ai", "likeness_notes"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -769,6 +769,15 @@ async def generate_celebration_hero(race_id: int, request: Request):
     body = await request.json()
     template_id = body.get("template_id")
     driver_id = body.get("driver_id")
+    requested_model = (body.get("model") or "").strip()
+    # Allowlist the image-capable models the API key actually exposes.
+    allowed_models = {
+        "nano-banana-pro-preview",
+        "gemini-3-pro-image-preview",
+        "gemini-3.1-flash-image-preview",
+        "gemini-2.5-flash-image",
+    }
+    model_to_use = requested_model if requested_model in allowed_models else "nano-banana-pro-preview"
     if not template_id:
         return {"error": "template_id is required."}
 
@@ -846,6 +855,13 @@ async def generate_celebration_hero(race_id: int, request: Request):
         "Image 1 is a portrait of the driver — preserve their face, hair, and likeness."
     )
     template_index = n_refs + 1
+
+    likeness_notes = (driver.get("likeness_notes") or "").strip()
+    likeness_line = (
+        f"\n\nWritten description of the driver to anchor identity (use these features "
+        f"in conjunction with the reference photos): {likeness_notes}\n"
+        if likeness_notes else ""
+    )
     prompt = (
         "You are generating an ultra-wide cinematic hero banner for a Formula 1 race "
         "recap website. The image will be displayed as a wide banner across the top of "
@@ -866,7 +882,8 @@ async def generate_celebration_hero(race_id: int, request: Request):
         "  reference photos. Match face shape, eye shape & colour, eyebrows, nose, "
         "  jawline, beard/stubble pattern, and hair colour & style exactly.\n"
         "- Do not invent generic features. If references disagree slightly, weight the "
-        "  most front-facing, well-lit one most heavily.\n\n"
+        "  most front-facing, well-lit one most heavily.\n"
+        f"{likeness_line}\n"
         f"Render this single photograph: the driver in the celebration moment described "
         f"by the scene reference: {template['prompt']}\n\n"
         "COMPOSITION RULES — read carefully, the final crop is aggressive:\n"
@@ -906,7 +923,7 @@ async def generate_celebration_hero(race_id: int, request: Request):
             contents.append(types.Part.from_bytes(data=b, mime_type="image/png"))
         contents.append(types.Part.from_bytes(data=template_bytes, mime_type="image/png"))
         response = client.models.generate_content(
-            model="nano-banana-pro-preview",
+            model=model_to_use,
             contents=contents,
             config={
                 "response_modalities": ["IMAGE", "TEXT"],
@@ -931,14 +948,15 @@ async def generate_celebration_hero(race_id: int, request: Request):
             f.write(image_bytes)
         image_path = f"/celebration_heroes/{filename}"
         candidate_id = execute(
-            """INSERT INTO race_hero_candidates (race_id, image_path, template_id, driver_id)
-               VALUES (?, ?, ?, ?)""",
-            (race_id, image_path, template_id, driver["id"]), fetch="none"
+            """INSERT INTO race_hero_candidates (race_id, image_path, template_id, driver_id, model)
+               VALUES (?, ?, ?, ?, ?)""",
+            (race_id, image_path, template_id, driver["id"], model_to_use), fetch="none"
         )
         return {
             "candidate_id": candidate_id,
             "image_path": image_path,
             "driver_name": driver["name"],
+            "model": model_to_use,
         }
     except Exception as e:
         logger.exception("Celebration hero generation failed")
@@ -961,7 +979,7 @@ async def list_hero_candidates(race_id: int):
     """List saved generations for a race, plus the currently-active hero path."""
     race = execute("SELECT hero_image FROM races WHERE id = ?", (race_id,), fetch="one")
     candidates = execute(
-        """SELECT c.id, c.image_path, c.template_id, c.driver_id, c.created_at,
+        """SELECT c.id, c.image_path, c.template_id, c.driver_id, c.model, c.created_at,
                   t.name AS template_name, d.name AS driver_name
            FROM race_hero_candidates c
            LEFT JOIN celebration_templates t ON c.template_id = t.id
