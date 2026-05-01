@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { get } from '../api'
+import StandingsChart from '../components/StandingsChart'
 
 export default function DriverStandings() {
   const [standings, setStandings] = useState([])
+  const [timeline, setTimeline] = useState({ races: [], drivers: [] })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    get('/standings/drivers')
-      .then(setStandings)
+    Promise.all([
+      get('/standings/drivers'),
+      get('/standings/drivers/timeline').catch(() => ({ races: [], drivers: [] })),
+    ])
+      .then(([s, t]) => { setStandings(s); setTimeline(t || { races: [], drivers: [] }) })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
@@ -33,7 +38,11 @@ export default function DriverStandings() {
         >Constructors</Link>
       </div>
 
-      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-hidden -mt-6">
+      <div className="-mt-6">
+        <StandingsChart races={timeline.races} items={timeline.drivers} mode="drivers" />
+      </div>
+
+      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#1F1F1F] text-[#999999] text-xs uppercase tracking-wider">
