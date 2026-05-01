@@ -611,6 +611,54 @@ HEROES_DIR = "/data/celebration_heroes" if os.path.isdir("/data") else os.path.j
 )
 
 
+# Distinctive visual cues for the F1 circuits we run. Gemini Pro knows most of
+# these already, but spelling out the iconic feature dramatically improves how
+# recognizable the rendered venue is. Keyed loosely by track name substring.
+CIRCUIT_NOTES = {
+    "monza": "Monza's iconic podium that bridges over the start/finish straight (cars passing underneath), surrounded by the Royal Park's classic Italian forest and tifosi in red.",
+    "monaco": "Monaco's harbour backdrop crammed with super-yachts, the Hotel de Paris and Casino square architecture, narrow Armco-lined streets behind.",
+    "silverstone": "Silverstone's modern Wing pit complex, British Racing Green grandstands, the Northamptonshire countryside.",
+    "spa": "Spa-Francorchamps' Ardennes forest, dramatic elevation changes, low grey clouds typical of the venue.",
+    "suzuka": "Suzuka's figure-eight layout cues, ferris wheel of the adjacent amusement park, Japanese signage.",
+    "monaco grand prix": "Monaco harbour with super-yachts and the Hotel de Paris.",
+    "australia": "Albert Park lake and Melbourne city skyline behind the trees.",
+    "albert park": "Albert Park lake and Melbourne city skyline behind the trees.",
+    "shanghai": "the Shanghai International Circuit's signature tower-like pit gantry and modern Chinese architecture.",
+    "miami": "Miami's pastel grandstands, palm trees, and Hard Rock Stadium silhouette.",
+    "canada": "the Île Notre-Dame setting with Montreal's St. Lawrence River and downtown skyline.",
+    "barcelona": "Barcelona-Catalunya's distinctive grandstand structures and dry Catalan hills.",
+    "spain": "Barcelona-Catalunya's distinctive grandstand structures and dry Catalan hills.",
+    "austria": "the Red Bull Ring's Styrian alpine backdrop and Red Bull branded grandstands.",
+    "great britain": "Silverstone's modern Wing pit complex and British countryside.",
+    "belgium": "Spa's Ardennes forest and dramatic elevation.",
+    "hungary": "the Hungaroring's basin layout with Budapest's wooded hills behind.",
+    "netherlands": "Zandvoort's banked corners, dunes, and a sea of orange-clad fans.",
+    "italy": "Monza's tree-lined Royal Park, classic Italian architecture, and the iconic over-track podium with the tifosi flooding the straight below.",
+    "azerbaijan": "Baku's old-town walls and the Flame Towers in the distance.",
+    "singapore": "Marina Bay's night-race lighting, modern skyline, and the floating platform.",
+    "united states": "Circuit of the Americas' tower observation deck and Texas hills.",
+    "mexico": "the Foro Sol stadium section packed with a roaring Mexican crowd.",
+    "brazil": "Interlagos' São Paulo skyline and the steep main-straight elevation.",
+    "las vegas": "the Las Vegas Strip casinos lit up at night.",
+    "qatar": "the Lusail Circuit's stark desert backdrop and modern grandstand architecture.",
+    "abu dhabi": "the Yas Marina hotel arching over the track at sunset, glowing in colour.",
+    "bahrain": "the desert backdrop and floodlit Bahrain pit complex.",
+    "saudi arabia": "the Jeddah corniche's coastline and modern street-circuit walls.",
+}
+
+
+def _circuit_note(race: dict) -> str:
+    """Return a short visual cue string for the race's circuit, or empty."""
+    haystack = " ".join([
+        (race.get("track_name") or ""),
+        (race.get("country") or ""),
+    ]).lower()
+    for needle, note in CIRCUIT_NOTES.items():
+        if needle in haystack:
+            return note
+    return ""
+
+
 def _load_image_bytes(path_or_url: str) -> bytes | None:
     """Resolve a stored image reference (URL or /-rooted path) and return bytes."""
     if not path_or_url:
@@ -776,6 +824,19 @@ async def generate_celebration_hero(race_id: int, request: Request):
         f"The driver races for {team_name}; use that team's race suit and helmet colours where appropriate. "
         if team_name else ""
     )
+    track_name = race.get("track_name") or ""
+    country = race.get("country") or ""
+    venue_line = ""
+    if track_name or country:
+        where = ", ".join(x for x in [track_name, country] if x)
+        circuit_note = _circuit_note(race)
+        venue_line = (
+            f"VENUE: this celebration takes place at {where}. "
+            "Make the location recognizable through its distinctive architecture, "
+            "grandstands, signage, surrounding terrain, and trackside details. "
+        )
+        if circuit_note:
+            venue_line += f"Iconic features to incorporate: {circuit_note} "
     n_refs = len(driver_image_bytes)
     refs_descriptor = (
         f"Images 1–{n_refs} are reference portraits of the SAME driver from different "
@@ -790,7 +851,7 @@ async def generate_celebration_hero(race_id: int, request: Request):
         "recap website. The image will be displayed as a wide banner across the top of "
         "the page (roughly 3:1 visible area), with a dark text panel overlaid on the "
         "LEFT THIRD of the frame.\n\n"
-        f"{refs_descriptor} {team_line}"
+        f"{refs_descriptor} {team_line}{venue_line}"
         f"Image {template_index} is the celebration scene reference.\n\n"
         "LIKENESS RULES (highest priority):\n"
         "- The output must clearly look like the SAME PERSON shown in the driver "
