@@ -137,7 +137,38 @@ CREATE TABLE IF NOT EXISTS tyre_stints (
     laps            INTEGER DEFAULT 0,
     FOREIGN KEY (result_id) REFERENCES race_results(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS celebration_templates (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    name            TEXT NOT NULL,
+    image_path      TEXT DEFAULT '',
+    prompt          TEXT NOT NULL,
+    country_tag     TEXT DEFAULT '',
+    podium_tag      TEXT DEFAULT '',
+    is_active       INTEGER DEFAULT 1,
+    sort_order      INTEGER DEFAULT 0,
+    created_at      TEXT DEFAULT (datetime('now'))
+);
 """
+
+
+CELEBRATION_SEED_TEMPLATES = [
+    ("Champagne Spray", "champagne_spray", "Driver on the top step of an F1 podium, eyes shut, mouth open laughing, spraying a magnum of champagne in a wide arc — bright spray frozen mid-air, photographers with long lenses below, confetti, golden sunset light."),
+    ("Trophy Lift", "trophy_lift", "Driver on the F1 podium hoisting a winner's trophy high overhead with both hands, head tilted back, fireworks and confetti in the background, dramatic stadium lighting."),
+    ("Helmet-Off Cockpit", "helmet_off_cockpit", "Driver still seated in the cockpit of his Formula 1 car after the chequered flag, helmet just removed and held in his lap, hair matted with sweat, eyes wide and grinning, mechanics rushing in around the car."),
+    ("Garage Hug", "garage_hug", "Driver in race suit being mobbed by mechanics in matching team kit inside an F1 garage, group hug, headsets and laptops in the background, crew laughing."),
+    ("Donuts on the Straight", "donuts_burnouts", "Formula 1 car performing celebratory donuts on the front straight after the race, thick white tyre smoke billowing, driver's arm out the cockpit waving a team flag, empty grandstands in the background."),
+    ("P1 Board Pose", "p1_board", "Driver standing in parc fermé next to a track marshal holding the large 'P1' board, fist pump in the air, helmet still on with visor up, photographers and team principal nearby."),
+    ("Parc Fermé Interview", "parc_ferme_interview", "Driver in race suit, helmet under one arm, being interviewed in parc fermé with a microphone in his face, soaked in champagne, smiling broadly, blurred crowd of media and crew behind."),
+    ("On Top of the Car", "on_top_of_car", "Driver standing on top of his Formula 1 car in parc fermé, both arms raised in triumph, helmet off, race suit unzipped to the waist, grandstand crowd cheering behind, classic Senna-style victory pose."),
+    ("Kneel Beside the Car", "kneel_beside_car", "Driver kneeling on the asphalt next to his Formula 1 car after the race, head bowed against the sidepod, hand resting on the bodywork — quiet, emotional moment, soft late-afternoon light."),
+    ("National Anthem", "national_anthem", "Driver standing on top step of the F1 podium during the national anthem, hand placed over his heart, head slightly bowed, trophy at his feet, flag rising behind, golden hour light."),
+    ("Team Principal Hug", "team_principal_hug", "Driver in race suit hugging his team principal in parc fermé, both wearing team gear, big grins, team radio headsets visible, crew clapping in the background."),
+    ("Cockpit Fist Pump", "cockpit_fist_pump", "Wide shot of an F1 car on the in-lap straight after winning, driver's gloved fists raised out of the cockpit pumping in the air, motion blur, sun flare across the camera."),
+    ("Trophy Walk", "trophy_walk", "Driver in race suit walking back toward his garage holding the winner's trophy under one arm, helmet under the other, fans on a fence reaching toward him, paddock in the background."),
+    ("Confetti Shower", "confetti_shower", "Tight portrait of a driver on the F1 podium with gold and silver confetti streaming down around him, blurred celebration in the background, broad smile, eyes closed in the moment."),
+    ("Pit Wall Jump", "pit_wall_jump", "Driver in race suit leaping up onto the top of the pit wall after winning, arms raised in celebration, team crew on the wall waving flags and headsets, pit lane action behind."),
+]
 
 
 def get_conn() -> sqlite3.Connection:
@@ -183,6 +214,16 @@ def init_db():
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
         except Exception:
             pass  # Column already exists
+
+    # Seed celebration templates on a fresh table; never overwrite existing rows
+    # so an admin can rename, retag, or delete without them coming back.
+    existing = conn.execute("SELECT COUNT(*) AS c FROM celebration_templates").fetchone()
+    if existing["c"] == 0:
+        for i, (name, _slug, prompt) in enumerate(CELEBRATION_SEED_TEMPLATES):
+            conn.execute(
+                "INSERT INTO celebration_templates (name, prompt, sort_order) VALUES (?, ?, ?)",
+                (name, prompt, i),
+            )
 
     conn.commit()
     conn.close()

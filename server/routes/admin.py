@@ -464,6 +464,93 @@ async def clear_results(race_id: int):
     return {"status": "cleared"}
 
 
+# ─── Celebration Templates ──────────────────────────────────────────
+
+CELEBRATION_DIR = "/data/celebration_templates" if os.path.isdir("/data") else os.path.join(
+    os.path.dirname(__file__), "..", "..", "frontend", "public", "celebration_templates"
+)
+
+
+@router.get("/celebration-templates")
+async def list_celebration_templates():
+    return execute(
+        "SELECT * FROM celebration_templates ORDER BY sort_order, id"
+    )
+
+
+@router.post("/celebration-templates")
+async def create_celebration_template(request: Request):
+    body = await request.json()
+    name = (body.get("name") or "").strip()
+    prompt = (body.get("prompt") or "").strip()
+    if not name or not prompt:
+        return {"error": "name and prompt are required."}
+    template_id = execute(
+        """INSERT INTO celebration_templates (name, prompt, country_tag, podium_tag, is_active, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (name, prompt,
+         (body.get("country_tag") or "").strip(),
+         (body.get("podium_tag") or "").strip(),
+         1 if body.get("is_active", True) else 0,
+         int(body.get("sort_order") or 0)),
+        fetch="none"
+    )
+    return {"id": template_id}
+
+
+@router.put("/celebration-templates/{template_id}")
+async def update_celebration_template(template_id: int, request: Request):
+    body = await request.json()
+    updates = []
+    params = []
+    for field in ("name", "prompt", "country_tag", "podium_tag", "is_active", "sort_order"):
+        if field in body:
+            updates.append(f"{field} = ?")
+            params.append(body[field])
+    if updates:
+        params.append(template_id)
+        execute(
+            f"UPDATE celebration_templates SET {', '.join(updates)} WHERE id = ?",
+            tuple(params), fetch="none"
+        )
+    return {"status": "updated"}
+
+
+@router.delete("/celebration-templates/{template_id}")
+async def delete_celebration_template(template_id: int):
+    row = execute("SELECT image_path FROM celebration_templates WHERE id = ?", (template_id,), fetch="one")
+    execute("DELETE FROM celebration_templates WHERE id = ?", (template_id,), fetch="none")
+    # Best-effort cleanup of the uploaded reference image
+    if row and row.get("image_path"):
+        path_on_disk = row["image_path"].lstrip("/")
+        candidate = os.path.join("/data", path_on_disk) if os.path.isdir("/data") else None
+        if candidate and os.path.isfile(candidate):
+            try:
+                os.remove(candidate)
+            except OSError:
+                pass
+    return {"status": "deleted"}
+
+
+@router.post("/celebration-templates/{template_id}/image")
+async def upload_celebration_template_image(template_id: int, file: UploadFile = File(...)):
+    template = execute("SELECT id FROM celebration_templates WHERE id = ?", (template_id,), fetch="one")
+    if not template:
+        return {"error": "Template not found."}
+    os.makedirs(CELEBRATION_DIR, exist_ok=True)
+    ext = os.path.splitext(file.filename)[1] or ".png"
+    filename = f"template_{template_id}{ext}"
+    filepath = os.path.join(CELEBRATION_DIR, filename)
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    image_path = f"/celebration_templates/{filename}"
+    execute(
+        "UPDATE celebration_templates SET image_path = ? WHERE id = ?",
+        (image_path, template_id), fetch="none"
+    )
+    return {"status": "uploaded", "image_path": image_path}
+
+
 # ─── Highlights ─────────────────────────────────────────────────────
 
 @router.get("/highlights")

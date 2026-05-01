@@ -11,6 +11,7 @@ const ADMIN_NAV = [
   { to: '/admin/points', label: 'Points' },
   { to: '/admin/articles', label: 'Articles' },
   { to: '/admin/highlights', label: 'Highlights' },
+  { to: '/admin/celebration-templates', label: 'Celebrations' },
 ]
 
 export default function AdminLayout() {

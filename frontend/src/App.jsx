@@ -19,6 +19,7 @@ import ManageResults from './pages/admin/ManageResults'
 import ManagePoints from './pages/admin/ManagePoints'
 import ManageArticles from './pages/admin/ManageArticles'
 import ManageHighlights from './pages/admin/ManageHighlights'
+import ManageCelebrationTemplates from './pages/admin/ManageCelebrationTemplates'
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="points" element={<ManagePoints />} />
         <Route path="articles" element={<ManageArticles />} />
         <Route path="highlights" element={<ManageHighlights />} />
+        <Route path="celebration-templates" element={<ManageCelebrationTemplates />} />
       </Route>
     </Routes>
   )
