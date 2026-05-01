@@ -149,6 +149,16 @@ CREATE TABLE IF NOT EXISTS celebration_templates (
     sort_order      INTEGER DEFAULT 0,
     created_at      TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS driver_reference_photos (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    driver_id       INTEGER NOT NULL,
+    image_path      TEXT NOT NULL,
+    label           TEXT DEFAULT '',
+    sort_order      INTEGER DEFAULT 0,
+    created_at      TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE
+);
 """
 
 

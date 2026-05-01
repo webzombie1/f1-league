@@ -206,6 +206,57 @@ async def upload_driver_photo(driver_id: int, file: UploadFile = File(...), requ
     return {"status": "uploaded", "photo_url": photo_url, "type": photo_type}
 
 
+# ─── Driver Reference Photos (extra likeness inputs for image gen) ──
+
+DRIVER_REFS_DIR = "/data/driver_refs" if os.path.isdir("/data") else os.path.join(
+    os.path.dirname(__file__), "..", "..", "frontend", "public", "driver_refs"
+)
+
+
+@router.get("/drivers/{driver_id}/reference-photos")
+async def list_driver_reference_photos(driver_id: int):
+    return execute(
+        "SELECT * FROM driver_reference_photos WHERE driver_id = ? ORDER BY sort_order, id",
+        (driver_id,)
+    )
+
+
+@router.post("/drivers/{driver_id}/reference-photos")
+async def upload_driver_reference_photo(
+    driver_id: int,
+    file: UploadFile = File(...),
+):
+    driver = execute("SELECT id FROM drivers WHERE id = ?", (driver_id,), fetch="one")
+    if not driver:
+        return {"error": "Driver not found."}
+    os.makedirs(DRIVER_REFS_DIR, exist_ok=True)
+    ext = os.path.splitext(file.filename)[1] or ".png"
+    filename = f"driver_{driver_id}_{int(time.time() * 1000)}{ext}"
+    filepath = os.path.join(DRIVER_REFS_DIR, filename)
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    image_path = f"/driver_refs/{filename}"
+    ref_id = execute(
+        "INSERT INTO driver_reference_photos (driver_id, image_path) VALUES (?, ?)",
+        (driver_id, image_path), fetch="none"
+    )
+    return {"id": ref_id, "image_path": image_path}
+
+
+@router.delete("/drivers/reference-photos/{ref_id}")
+async def delete_driver_reference_photo(ref_id: int):
+    row = execute("SELECT image_path FROM driver_reference_photos WHERE id = ?", (ref_id,), fetch="one")
+    execute("DELETE FROM driver_reference_photos WHERE id = ?", (ref_id,), fetch="none")
+    if row and row.get("image_path"):
+        candidate = os.path.join("/data", row["image_path"].lstrip("/")) if os.path.isdir("/data") else None
+        if candidate and os.path.isfile(candidate):
+            try:
+                os.remove(candidate)
+            except OSError:
+                pass
+    return {"status": "deleted"}
+
+
 # ─── Races ──────────────────────────────────────────────────────────
 
 @router.post("/races")
@@ -683,8 +734,6 @@ async def generate_celebration_hero(race_id: int, request: Request):
         driver = _winner_for_race(race_id, race["season_id"])
     if not driver:
         return {"error": "No P1 finisher found. Pick a driver explicitly."}
-    if not driver.get("photo_url"):
-        return {"error": f"{driver['name']} has no photo to use as reference."}
 
     template = execute(
         "SELECT * FROM celebration_templates WHERE id = ?", (template_id,), fetch="one"
@@ -694,10 +743,29 @@ async def generate_celebration_hero(race_id: int, request: Request):
     if not template.get("image_path"):
         return {"error": "Template has no reference image yet — upload one first."}
 
-    driver_bytes = _load_image_bytes(driver["photo_url"])
+    # Collect every available reference image for the driver: the standings
+    # thumbnail, the full-body standing photo, and any extra reference photos
+    # the admin has uploaded. More refs → better likeness from Gemini.
+    ref_photo_rows = execute(
+        "SELECT image_path FROM driver_reference_photos WHERE driver_id = ? ORDER BY sort_order, id",
+        (driver["id"],)
+    )
+    ref_paths = []
+    if driver.get("photo_url"):
+        ref_paths.append(driver["photo_url"])
+    if driver.get("photo_standing"):
+        ref_paths.append(driver["photo_standing"])
+    ref_paths.extend(r["image_path"] for r in ref_photo_rows if r.get("image_path"))
+
+    driver_image_bytes = []
+    for p in ref_paths:
+        b = _load_image_bytes(p)
+        if b:
+            driver_image_bytes.append(b)
+    if not driver_image_bytes:
+        return {"error": f"{driver['name']} has no reference photos to use."}
+
     template_bytes = _load_image_bytes(template["image_path"])
-    if not driver_bytes:
-        return {"error": "Couldn't load driver photo."}
     if not template_bytes:
         return {"error": "Couldn't load template reference image."}
 
@@ -708,16 +776,30 @@ async def generate_celebration_hero(race_id: int, request: Request):
         f"The driver races for {team_name}; use that team's race suit and helmet colours where appropriate. "
         if team_name else ""
     )
+    n_refs = len(driver_image_bytes)
+    refs_descriptor = (
+        f"Images 1–{n_refs} are reference portraits of the SAME driver from different "
+        "angles and expressions — use them together to lock in the face, hair, build, "
+        "and overall likeness."
+        if n_refs > 1 else
+        "Image 1 is a portrait of the driver — preserve their face, hair, and likeness."
+    )
+    template_index = n_refs + 1
     prompt = (
         "You are generating an ultra-wide cinematic hero banner for a Formula 1 race "
         "recap website. The image will be displayed as a wide banner across the top of "
         "the page (roughly 3:1 visible area), with a dark text panel overlaid on the "
         "LEFT THIRD of the frame.\n\n"
-        "Image 1 is a portrait of the driver to feature — preserve their face, hair, "
-        f"and likeness. {team_line}"
-        "Image 2 is the celebration scene reference.\n\n"
-        f"Compose a single photorealistic widescreen 16:9 image showing the driver "
-        f"from image 1 in this celebration moment: {template['prompt']}\n\n"
+        f"{refs_descriptor} {team_line}"
+        f"Image {template_index} is the celebration scene reference.\n\n"
+        "LIKENESS RULES (highest priority):\n"
+        "- The output must clearly look like the SAME PERSON shown in the driver "
+        "  reference photos. Match face shape, eye shape & colour, eyebrows, nose, "
+        "  jawline, beard/stubble pattern, and hair colour & style exactly.\n"
+        "- Do not invent generic features. If references disagree slightly, weight the "
+        "  most front-facing, well-lit one most heavily.\n\n"
+        f"Compose a single photorealistic widescreen 16:9 image showing this driver "
+        f"in the celebration moment described by the scene reference: {template['prompt']}\n\n"
         "STRICT COMPOSITION RULES:\n"
         "- The driver must sit in the RIGHT HALF of the frame, with their face entirely "
         "  visible and roughly on the upper-third horizontal line.\n"
@@ -735,13 +817,13 @@ async def generate_celebration_hero(race_id: int, request: Request):
         from google import genai
         from google.genai import types
         client = genai.Client(api_key=GEMINI_API_KEY)
+        contents = [prompt]
+        for b in driver_image_bytes:
+            contents.append(types.Part.from_bytes(data=b, mime_type="image/png"))
+        contents.append(types.Part.from_bytes(data=template_bytes, mime_type="image/png"))
         response = client.models.generate_content(
-            model="gemini-3.1-flash-image-preview",
-            contents=[
-                prompt,
-                types.Part.from_bytes(data=driver_bytes, mime_type="image/png"),
-                types.Part.from_bytes(data=template_bytes, mime_type="image/png"),
-            ],
+            model="gemini-3-pro-image-preview",
+            contents=contents,
             config={
                 "response_modalities": ["IMAGE", "TEXT"],
                 "image_config": {"aspect_ratio": "16:9"},

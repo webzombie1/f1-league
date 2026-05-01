@@ -16,6 +16,12 @@ export default function ManageDrivers() {
   const [discordUrl, setDiscordUrl] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editData, setEditData] = useState({})
+  const [refPhotos, setRefPhotos] = useState([])
+
+  const loadRefPhotos = async (driverId) => {
+    const photos = await get(`/admin/drivers/${driverId}/reference-photos`).catch(() => [])
+    setRefPhotos(photos || [])
+  }
 
   const startEdit = (d) => {
     setEditingId(d.id)
@@ -26,6 +32,23 @@ export default function ManageDrivers() {
       ai_substitute_id: d.ai_substitute_id || '',
       is_ai: d.is_ai || 0,
     })
+    loadRefPhotos(d.id)
+  }
+
+  const uploadRefPhoto = async (driverId, file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    await fetch(`/api/admin/drivers/${driverId}/reference-photos`, {
+      method: 'POST',
+      credentials: 'include',
+      body: fd,
+    })
+    loadRefPhotos(driverId)
+  }
+
+  const deleteRefPhoto = async (refId, driverId) => {
+    await del(`/admin/drivers/reference-photos/${refId}`)
+    loadRefPhotos(driverId)
   }
 
   const saveEdit = async () => {
@@ -211,6 +234,32 @@ export default function ManageDrivers() {
                         load()
                       }} />
                     </label>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[8px] text-[#999999] uppercase tracking-wider mb-1">
+                      Likeness References
+                      <span className="text-[#777777] normal-case tracking-normal ml-2">— used for AI hero generation; more angles = better likeness</span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {refPhotos.map(p => (
+                        <div key={p.id} className="relative group w-16 h-16 rounded-lg bg-[#1F1F1F] overflow-hidden">
+                          <img src={p.image_path} alt="" className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => deleteRefPhoto(p.id, d.id)}
+                            className="absolute top-0 right-0 w-5 h-5 flex items-center justify-center bg-black/70 text-white text-xs leading-none cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Delete"
+                          >×</button>
+                        </div>
+                      ))}
+                      <label className="cursor-pointer w-16 h-16 rounded-lg bg-[#0D1117] border border-dashed border-[#383838] hover:border-[#7ED321] flex items-center justify-center text-[10px] text-[#777777] hover:text-[#7ED321] transition-colors">
+                        + Add
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                          const file = e.target.files[0]; if (!file) return
+                          uploadRefPhoto(d.id, file)
+                          e.target.value = ''
+                        }} />
+                      </label>
+                    </div>
                   </div>
                 </div>
 
