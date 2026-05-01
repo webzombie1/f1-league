@@ -4,6 +4,8 @@ import json
 import logging
 import os
 import shutil
+import time
+import urllib.request
 from fastapi import APIRouter, Request, UploadFile, File
 from server.db import execute, get_conn
 from server.config import GEMINI_API_KEY
@@ -549,6 +551,217 @@ async def upload_celebration_template_image(template_id: int, file: UploadFile =
         (image_path, template_id), fetch="none"
     )
     return {"status": "uploaded", "image_path": image_path}
+
+
+# ─── Celebration Hero Generation ────────────────────────────────────
+
+HEROES_DIR = "/data/celebration_heroes" if os.path.isdir("/data") else os.path.join(
+    os.path.dirname(__file__), "..", "..", "frontend", "public", "celebration_heroes"
+)
+
+
+def _load_image_bytes(path_or_url: str) -> bytes | None:
+    """Resolve a stored image reference (URL or /-rooted path) and return bytes."""
+    if not path_or_url:
+        return None
+    if path_or_url.startswith(("http://", "https://")):
+        try:
+            with urllib.request.urlopen(path_or_url, timeout=20) as resp:
+                return resp.read()
+        except Exception as e:
+            logger.error("Failed to fetch external image %s: %s", path_or_url, e)
+            return None
+    relative = path_or_url.lstrip("/")
+    candidates = []
+    if os.path.isdir("/data"):
+        candidates.append(os.path.join("/data", relative))
+    base = os.path.join(os.path.dirname(__file__), "..", "..")
+    candidates.append(os.path.join(base, "frontend", "public", relative))
+    candidates.append(os.path.join(base, "frontend", "dist", relative))
+    for c in candidates:
+        if os.path.isfile(c):
+            with open(c, "rb") as f:
+                return f.read()
+    return None
+
+
+def _winner_for_race(race_id: int, season_id: int) -> dict | None:
+    """Return the human P1 finisher for a race, applying AI substitute remap."""
+    row = execute(
+        """
+        SELECT COALESCE(h.id, sd.id) AS effective_driver_id, rr.grid_position
+        FROM race_results rr
+        LEFT JOIN drivers sd ON sd.id = COALESCE(
+            rr.driver_id,
+            (SELECT id FROM drivers
+             WHERE season_id = ?
+               AND LOWER(TRIM(name)) = LOWER(TRIM(rr.driver_name_raw))
+             LIMIT 1)
+        )
+        LEFT JOIN drivers h ON h.id = (
+            SELECT id FROM drivers
+            WHERE ai_substitute_id = sd.id AND sd.is_ai = 1
+            LIMIT 1
+        )
+        WHERE rr.race_id = ? AND rr.position = 1 AND rr.status = 'finished'
+        LIMIT 1
+        """,
+        (season_id, race_id), fetch="one"
+    )
+    if not row or not row.get("effective_driver_id"):
+        return None
+    driver = execute("SELECT * FROM drivers WHERE id = ?", (row["effective_driver_id"],), fetch="one")
+    if driver:
+        driver["grid_position"] = row.get("grid_position")
+    return driver
+
+
+def _classify_podium(race_id: int) -> str:
+    """Compute a podium tag for the race: dominant/close/comeback or empty."""
+    results = execute(
+        """SELECT position, grid_position, total_time_s
+           FROM race_results
+           WHERE race_id = ? AND status = 'finished'
+           ORDER BY position
+           LIMIT 2""",
+        (race_id,)
+    )
+    if len(results) >= 2 and results[0].get("total_time_s") and results[1].get("total_time_s"):
+        gap = results[1]["total_time_s"] - results[0]["total_time_s"]
+        if gap > 5: return "dominant"
+        if gap < 2: return "close"
+    if results:
+        winner = results[0]
+        if winner.get("grid_position") and winner["grid_position"] - 1 > 5:
+            return "comeback"
+    return ""
+
+
+@router.get("/races/{race_id}/celebration-suggestion")
+async def suggest_celebration_template(race_id: int):
+    """Pick a default template based on country tag and podium type."""
+    race = execute("SELECT * FROM races WHERE id = ?", (race_id,), fetch="one")
+    if not race:
+        return {"error": "Race not found."}
+    podium = _classify_podium(race_id)
+    country = race.get("country", "") or ""
+    candidate = execute(
+        """SELECT * FROM celebration_templates
+           WHERE is_active = 1 AND image_path != ''
+           ORDER BY
+               CASE WHEN LOWER(country_tag) = LOWER(?) AND country_tag != '' THEN 0 ELSE 1 END,
+               CASE WHEN podium_tag = ? AND podium_tag != '' THEN 0 ELSE 1 END,
+               sort_order, id
+           LIMIT 1""",
+        (country, podium), fetch="one"
+    )
+    return {
+        "template_id": candidate["id"] if candidate else None,
+        "country": country,
+        "podium_tag": podium,
+    }
+
+
+@router.post("/races/{race_id}/generate-celebration-hero")
+async def generate_celebration_hero(race_id: int, request: Request):
+    """Run the driver photo + template through Gemini and save a preview image."""
+    if not GEMINI_API_KEY:
+        return {"error": "GEMINI_API_KEY not configured."}
+    body = await request.json()
+    template_id = body.get("template_id")
+    driver_id = body.get("driver_id")
+    if not template_id:
+        return {"error": "template_id is required."}
+
+    race = execute("SELECT * FROM races WHERE id = ?", (race_id,), fetch="one")
+    if not race:
+        return {"error": "Race not found."}
+
+    if driver_id:
+        driver = execute("SELECT * FROM drivers WHERE id = ?", (driver_id,), fetch="one")
+    else:
+        driver = _winner_for_race(race_id, race["season_id"])
+    if not driver:
+        return {"error": "No P1 finisher found. Pick a driver explicitly."}
+    if not driver.get("photo_url"):
+        return {"error": f"{driver['name']} has no photo to use as reference."}
+
+    template = execute(
+        "SELECT * FROM celebration_templates WHERE id = ?", (template_id,), fetch="one"
+    )
+    if not template:
+        return {"error": "Template not found."}
+    if not template.get("image_path"):
+        return {"error": "Template has no reference image yet — upload one first."}
+
+    driver_bytes = _load_image_bytes(driver["photo_url"])
+    template_bytes = _load_image_bytes(template["image_path"])
+    if not driver_bytes:
+        return {"error": "Couldn't load driver photo."}
+    if not template_bytes:
+        return {"error": "Couldn't load template reference image."}
+
+    team = execute("SELECT name, color FROM teams WHERE id = ?", (driver.get("team_id"),), fetch="one") if driver.get("team_id") else None
+    team_name = team["name"] if team else ""
+
+    prompt = (
+        "You are generating a celebratory hero image for a Formula 1 race recap. "
+        "Image 1 is a portrait of the driver to feature — preserve their face, hair, "
+        f"and likeness. The driver races for {team_name + ' — ' if team_name else ''}"
+        "use that team's race suit and helmet colours where appropriate. Image 2 is "
+        "the celebration scene reference. "
+        f"Compose a single photorealistic 16:9 widescreen image showing the driver "
+        f"from image 1 in this celebration moment: {template['prompt']} "
+        "Crisp focus on the driver, cinematic lighting, 16:9 aspect ratio."
+    )
+
+    try:
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-image-preview",
+            contents=[
+                prompt,
+                types.Part.from_bytes(data=driver_bytes, mime_type="image/png"),
+                types.Part.from_bytes(data=template_bytes, mime_type="image/png"),
+            ],
+            config=types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
+        )
+        image_bytes = None
+        for cand in response.candidates or []:
+            for part in cand.content.parts or []:
+                if getattr(part, "inline_data", None) and part.inline_data.data:
+                    image_bytes = part.inline_data.data
+                    break
+            if image_bytes:
+                break
+        if not image_bytes:
+            return {"error": "Gemini did not return an image."}
+
+        os.makedirs(HEROES_DIR, exist_ok=True)
+        filename = f"race_{race_id}_{int(time.time())}.png"
+        filepath = os.path.join(HEROES_DIR, filename)
+        with open(filepath, "wb") as f:
+            f.write(image_bytes)
+        return {
+            "preview_path": f"/celebration_heroes/{filename}",
+            "driver_name": driver["name"],
+        }
+    except Exception as e:
+        logger.exception("Celebration hero generation failed")
+        return {"error": f"Generation failed: {str(e)}"}
+
+
+@router.post("/races/{race_id}/hero-image")
+async def commit_hero_image(race_id: int, request: Request):
+    """Persist a chosen image path as the race's hero_image."""
+    body = await request.json()
+    image_path = (body.get("image_path") or "").strip()
+    if not image_path:
+        return {"error": "image_path is required."}
+    execute("UPDATE races SET hero_image = ? WHERE id = ?", (image_path, race_id), fetch="none")
+    return {"status": "updated", "hero_image": image_path}
 
 
 # ─── Highlights ─────────────────────────────────────────────────────

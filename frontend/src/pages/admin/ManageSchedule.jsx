@@ -60,6 +60,65 @@ export default function ManageSchedule() {
   const [editingDateId, setEditingDateId] = useState(null)
   const [editingDateValue, setEditingDateValue] = useState('')
 
+  // Celebration hero modal state
+  const [heroModalRace, setHeroModalRace] = useState(null)
+  const [heroTemplates, setHeroTemplates] = useState([])
+  const [heroTemplateId, setHeroTemplateId] = useState(null)
+  const [heroPodiumTag, setHeroPodiumTag] = useState('')
+  const [heroPreviewPath, setHeroPreviewPath] = useState('')
+  const [heroDriverName, setHeroDriverName] = useState('')
+  const [heroGenerating, setHeroGenerating] = useState(false)
+  const [heroError, setHeroError] = useState('')
+
+  const openHeroModal = async (race) => {
+    setHeroModalRace(race)
+    setHeroPreviewPath('')
+    setHeroDriverName('')
+    setHeroError('')
+    const [templates, suggestion] = await Promise.all([
+      get('/admin/celebration-templates'),
+      get(`/admin/races/${race.id}/celebration-suggestion`).catch(() => null),
+    ])
+    const active = (templates || []).filter(t => t.is_active && t.image_path)
+    setHeroTemplates(active)
+    setHeroTemplateId(suggestion?.template_id || (active[0]?.id ?? null))
+    setHeroPodiumTag(suggestion?.podium_tag || '')
+  }
+
+  const closeHeroModal = () => {
+    setHeroModalRace(null)
+    setHeroPreviewPath('')
+    setHeroError('')
+  }
+
+  const generateHero = async () => {
+    if (!heroModalRace || !heroTemplateId) return
+    setHeroGenerating(true)
+    setHeroError('')
+    try {
+      const res = await post(`/admin/races/${heroModalRace.id}/generate-celebration-hero`, {
+        template_id: heroTemplateId,
+      })
+      if (res.error) {
+        setHeroError(res.error)
+        setHeroPreviewPath('')
+      } else {
+        setHeroPreviewPath(res.preview_path)
+        setHeroDriverName(res.driver_name || '')
+      }
+    } catch (e) {
+      setHeroError(e.message || 'Generation failed.')
+    }
+    setHeroGenerating(false)
+  }
+
+  const commitHero = async () => {
+    if (!heroPreviewPath || !heroModalRace) return
+    await post(`/admin/races/${heroModalRace.id}/hero-image`, { image_path: heroPreviewPath })
+    if (seasonId) setRaces(await get(`/races?season_id=${seasonId}`))
+    closeHeroModal()
+  }
+
   const setRaceDate = async (raceId, newDate) => {
     setSaving(true)
     try {
@@ -655,13 +714,95 @@ export default function ManageSchedule() {
                 <button onClick={() => markCompleted(r.id)} className={btnPrimary}>Mark Completed</button>
               )}
               {r.status === 'completed' && (
-                <span className="text-xs bg-[#7ED321]/15 text-[#7ED321] px-2 py-1 rounded-md">Completed</span>
+                <>
+                  <span className="text-xs bg-[#7ED321]/15 text-[#7ED321] px-2 py-1 rounded-md">Completed</span>
+                  <button onClick={() => openHeroModal(r)} className={btnSecondary}>Hero</button>
+                </>
               )}
               <button onClick={() => remove(r.id)} className={btnDanger}>Delete</button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Celebration hero modal */}
+      {heroModalRace && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80" onClick={closeHeroModal}>
+          <div className="w-full max-w-3xl mx-4 bg-[#111111] border border-[#1F1F1F] rounded-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-[#1F1F1F] flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-[#E8ECF4]">Generate celebration hero</h3>
+                <p className="text-xs text-[#777777] mt-0.5">
+                  Round {heroModalRace.round_number}: {heroModalRace.track_name} · {heroModalRace.country}
+                </p>
+              </div>
+              <button onClick={closeHeroModal} className="text-[#999999] hover:text-white text-2xl leading-none cursor-pointer">×</button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-[#999999] uppercase tracking-wider mb-1">Celebration template</label>
+                  <select
+                    value={heroTemplateId || ''}
+                    onChange={e => setHeroTemplateId(parseInt(e.target.value) || null)}
+                    className="w-full bg-[#0D1117] border border-[#1F1F1F] rounded px-2 py-2 text-sm text-[#E8ECF4]"
+                  >
+                    {heroTemplates.length === 0 ? (
+                      <option value="">No active templates with images</option>
+                    ) : (
+                      heroTemplates.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                {heroPodiumTag && (
+                  <span className="text-[10px] uppercase tracking-wider bg-[#7ED321]/15 text-[#7ED321] px-2 py-1 rounded">
+                    Suggested: {heroPodiumTag}
+                  </span>
+                )}
+              </div>
+
+              <div className="aspect-[16/9] bg-[#0D1117] border border-[#1F1F1F] rounded overflow-hidden flex items-center justify-center relative">
+                {heroPreviewPath ? (
+                  <img src={heroPreviewPath} alt="" className="w-full h-full object-cover" />
+                ) : heroGenerating ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-3 border-[#1F1F1F] border-t-[#7ED321] rounded-full animate-spin" />
+                    <p className="text-sm text-[#999999]">Generating… this can take 10–20s.</p>
+                  </div>
+                ) : (
+                  <p className="text-[#555] text-xs uppercase tracking-wider">Preview will appear here</p>
+                )}
+              </div>
+
+              {heroError && (
+                <p className="text-xs text-red-400">{heroError}</p>
+              )}
+              {heroPreviewPath && heroDriverName && (
+                <p className="text-xs text-[#999999]">Featuring: {heroDriverName}</p>
+              )}
+
+              <div className="flex gap-2 justify-end pt-1">
+                <button onClick={closeHeroModal} className={btnSecondary}>Cancel</button>
+                <button
+                  onClick={generateHero}
+                  disabled={heroGenerating || !heroTemplateId}
+                  className={btnSecondary}
+                >
+                  {heroPreviewPath ? 'Regenerate' : 'Generate'}
+                </button>
+                <button
+                  onClick={commitHero}
+                  disabled={!heroPreviewPath || heroGenerating}
+                  className={btnPrimary}
+                >Use this image</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
