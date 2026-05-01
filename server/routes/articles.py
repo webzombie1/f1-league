@@ -25,7 +25,9 @@ async def list_articles(season_id: int = Query(None)):
 @router.get("/articles/{article_id}")
 async def get_article(article_id: int):
     article = execute("""
-        SELECT a.*, r.track_name, r.country, r.round_number, r.date
+        SELECT a.*,
+               r.track_name, r.country, r.round_number, r.date,
+               r.hero_image AS race_hero_image
         FROM articles a
         LEFT JOIN races r ON a.race_id = r.id
         WHERE a.id = ?

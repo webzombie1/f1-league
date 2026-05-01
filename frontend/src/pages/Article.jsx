@@ -24,12 +24,12 @@ export default function Article() {
 
   return (
     <div>
-      {/* Hero image */}
-      {article.hero_image && (
+      {/* Hero image — prefer the race's generated celebration hero */}
+      {(article.race_hero_image || article.hero_image) && (
         <div className="relative w-full h-[300px] overflow-hidden">
           <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${article.hero_image})` }}
+            className="absolute inset-0 bg-cover bg-[center_55%]"
+            style={{ backgroundImage: `url(${article.race_hero_image || article.hero_image})` }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0D1117] via-[#0D1117]/40 to-transparent" />
         </div>
