@@ -164,7 +164,7 @@ async def driver_standings_timeline(season_id: int = Query(None)):
         (season_id,)
     )
     drivers = execute(
-        "SELECT d.id, d.name, t.name AS team_name, t.color AS team_color "
+        "SELECT d.id, d.name, d.photo_url, t.name AS team_name, t.color AS team_color "
         "FROM drivers d LEFT JOIN teams t ON d.team_id = t.id "
         "WHERE d.season_id = ? AND d.is_active = 1 AND d.is_ai = 0 ORDER BY d.id",
         (season_id,)
@@ -192,6 +192,7 @@ async def driver_standings_timeline(season_id: int = Query(None)):
         out.append({
             "id": d["id"],
             "name": d["name"],
+            "photo_url": d["photo_url"],
             "team_name": d["team_name"],
             "team_color": d["team_color"],
             "points_per_round": cum,
