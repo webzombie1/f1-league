@@ -704,15 +704,31 @@ async def generate_celebration_hero(race_id: int, request: Request):
     team = execute("SELECT name, color FROM teams WHERE id = ?", (driver.get("team_id"),), fetch="one") if driver.get("team_id") else None
     team_name = team["name"] if team else ""
 
+    team_line = (
+        f"The driver races for {team_name}; use that team's race suit and helmet colours where appropriate. "
+        if team_name else ""
+    )
     prompt = (
-        "You are generating a celebratory hero image for a Formula 1 race recap. "
+        "You are generating an ultra-wide cinematic hero banner for a Formula 1 race "
+        "recap website. The image will be displayed as a wide banner across the top of "
+        "the page (roughly 3:1 visible area), with a dark text panel overlaid on the "
+        "LEFT THIRD of the frame.\n\n"
         "Image 1 is a portrait of the driver to feature — preserve their face, hair, "
-        f"and likeness. The driver races for {team_name + ' — ' if team_name else ''}"
-        "use that team's race suit and helmet colours where appropriate. Image 2 is "
-        "the celebration scene reference. "
-        f"Compose a single photorealistic 16:9 widescreen image showing the driver "
-        f"from image 1 in this celebration moment: {template['prompt']} "
-        "Crisp focus on the driver, cinematic lighting, 16:9 aspect ratio."
+        f"and likeness. {team_line}"
+        "Image 2 is the celebration scene reference.\n\n"
+        f"Compose a single photorealistic widescreen 16:9 image showing the driver "
+        f"from image 1 in this celebration moment: {template['prompt']}\n\n"
+        "STRICT COMPOSITION RULES:\n"
+        "- The driver must sit in the RIGHT HALF of the frame, with their face entirely "
+        "  visible and roughly on the upper-third horizontal line.\n"
+        "- Leave noticeable HEADROOM above the driver — at least 15% of the image "
+        "  height should be background above the highest point of their head/helmet.\n"
+        "- The LEFT THIRD of the frame should be quieter (sky, blurred crowd, motion "
+        "  blur, soft bokeh — not faces or text) so a dark text panel can overlay it "
+        "  without obscuring the subject.\n"
+        "- Avoid placing critical detail near the very top or very bottom edge — assume "
+        "  the top 10% and bottom 10% may be cropped on wider screens.\n"
+        "- Photorealistic, crisp focus on the driver, cinematic lighting, 16:9."
     )
 
     try:
@@ -726,7 +742,10 @@ async def generate_celebration_hero(race_id: int, request: Request):
                 types.Part.from_bytes(data=driver_bytes, mime_type="image/png"),
                 types.Part.from_bytes(data=template_bytes, mime_type="image/png"),
             ],
-            config=types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
+            config={
+                "response_modalities": ["IMAGE", "TEXT"],
+                "image_config": {"aspect_ratio": "16:9"},
+            },
         )
         image_bytes = None
         for cand in response.candidates or []:
