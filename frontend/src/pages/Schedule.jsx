@@ -44,13 +44,13 @@ export default function Schedule() {
                 : 'bg-[#111111] border border-[#7ED321]/30 hover:border-[#383838]'
             }`}
           >
-            {/* Track image */}
-            {race.track_image ? (
+            {/* Tile image — celebration hero for completed races, track otherwise */}
+            {(race.status === 'completed' && race.hero_image) || race.track_image ? (
               <div className="w-full h-36 overflow-hidden relative">
                 <img
-                  src={race.track_image}
+                  src={race.status === 'completed' && race.hero_image ? race.hero_image : race.track_image}
                   alt={race.track_name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-[center_55%]"
                 />
                 {race.status === 'completed' && (
                   <div className="absolute top-2 right-2">
