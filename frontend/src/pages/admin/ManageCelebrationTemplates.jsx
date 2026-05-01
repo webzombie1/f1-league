@@ -12,9 +12,17 @@ export default function ManageCelebrationTemplates() {
   const [templates, setTemplates] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [draft, setDraft] = useState(null)
+  // Bumped after every successful upload / trim / restore so we can cache-bust
+  // image URLs — the file path stays the same on the server but the bytes
+  // changed, so browsers would otherwise keep serving the stale image.
+  const [imgVersion, setImgVersion] = useState(Date.now())
+  const cacheBust = (url) => url ? `${url}${url.includes('?') ? '&' : '?'}v=${imgVersion}` : url
 
   const load = () => {
-    get('/admin/celebration-templates').then(setTemplates).catch(() => {})
+    get('/admin/celebration-templates').then(t => {
+      setTemplates(t)
+      setImgVersion(Date.now())
+    }).catch(() => {})
   }
   useEffect(load, [])
 
@@ -49,13 +57,24 @@ export default function ManageCelebrationTemplates() {
   const uploadImage = async (templateId, file) => {
     const fd = new FormData()
     fd.append('file', file)
-    const res = await fetch(`/api/admin/celebration-templates/${templateId}/image`, {
-      method: 'POST',
-      credentials: 'include',
-      body: fd,
-    })
-    if (!res.ok) {
-      alert('Upload failed.')
+    try {
+      const res = await fetch(`/api/admin/celebration-templates/${templateId}/image`, {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      })
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        alert(`Upload failed (HTTP ${res.status}). ${body.slice(0, 200)}`)
+        return
+      }
+      const data = await res.json().catch(() => null)
+      if (data?.error) {
+        alert(`Upload failed: ${data.error}`)
+        return
+      }
+    } catch (e) {
+      alert(`Upload failed: ${e.message}`)
       return
     }
     load()
@@ -106,7 +125,7 @@ export default function ManageCelebrationTemplates() {
             <div key={t.id} className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-hidden">
               <div className="aspect-[16/9] bg-[#0D1117] relative overflow-hidden">
                 {t.image_path ? (
-                  <img src={t.image_path} alt={t.name} className="w-full h-full object-cover" />
+                  <img src={cacheBust(t.image_path)} alt={t.name} className="w-full h-full object-cover" />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-[#555] text-xs uppercase tracking-wider">
                     No reference image
