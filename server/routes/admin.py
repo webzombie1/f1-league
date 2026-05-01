@@ -1051,27 +1051,47 @@ async def generate_celebration_hero(race_id: int, request: Request):
     try:
         image_bytes = None
         if is_openai:
-            # OpenAI gpt-image-1 takes a list of reference images via the edits
-            # endpoint. We send template first then the driver references; the
-            # prompt already calls out which is which by index. The endpoint
-            # uses the filename extension to infer MIME type, so detect each
-            # buffer's actual format from its magic bytes.
+            # OpenAI gpt-image-1 takes a list of reference images via the
+            # edits endpoint. Inputs must be PNG/JPEG/WEBP under modest size
+            # limits — phone photos at full resolution and AVIF templates
+            # both fail with "Invalid image file or mode". We normalise every
+            # input through Pillow: convert to RGB, downscale to max 1280px
+            # on the longest side, and re-encode as PNG.
             import io
             import base64
             from openai import OpenAI
+            try:
+                import pillow_avif  # noqa: F401  enables AVIF decoding in PIL
+            except ImportError:
+                pass
+            from PIL import Image
 
-            def _ext_for(b: bytes) -> str:
-                if b[:8] == b"\x89PNG\r\n\x1a\n": return "png"
-                if b[:2] == b"\xff\xd8": return "jpg"
-                if len(b) >= 12 and b[:4] == b"RIFF" and b[8:12] == b"WEBP": return "webp"
-                return "png"
+            def _normalise(b: bytes) -> bytes:
+                im = Image.open(io.BytesIO(b))
+                if im.mode != "RGB":
+                    im = im.convert("RGB")
+                w, h = im.size
+                m = max(w, h)
+                if m > 1280:
+                    s = 1280 / m
+                    im = im.resize((int(w * s), int(h * s)), Image.LANCZOS)
+                out = io.BytesIO()
+                im.save(out, format="PNG", optimize=True)
+                return out.getvalue()
 
             oai = OpenAI(api_key=OPENAI_API_KEY)
             files = []
-            for idx, b in enumerate([template_bytes] + driver_image_bytes):
-                buf = io.BytesIO(b)
-                buf.name = f"input_{idx}.{_ext_for(b)}"
+            for idx, raw in enumerate([template_bytes] + driver_image_bytes):
+                try:
+                    norm = _normalise(raw)
+                except Exception as e:
+                    logger.warning("Skipping input %d (couldn't normalise): %s", idx, e)
+                    continue
+                buf = io.BytesIO(norm)
+                buf.name = f"input_{idx}.png"
                 files.append(buf)
+            if not files:
+                return {"error": "No valid input images after normalisation."}
             result = oai.images.edit(
                 model="gpt-image-1",
                 image=files,
