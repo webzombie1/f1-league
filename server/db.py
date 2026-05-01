@@ -163,7 +163,7 @@ CREATE TABLE IF NOT EXISTS driver_reference_photos (
 
 
 CELEBRATION_SEED_TEMPLATES = [
-    ("Champagne Spray", "champagne_spray", "Driver on the top step of an F1 podium, eyes shut, mouth open laughing, spraying a magnum of champagne in a wide arc — bright spray frozen mid-air, photographers with long lenses below, confetti, golden sunset light."),
+    ("Champagne Spray", "champagne_spray", "Driver on the top step of an F1 podium, eyes shut, mouth open laughing, spraying a magnum of champagne in a wide arc — bright spray frozen mid-air. The track in front of the podium is FLOODED with fans who have rushed onto the circuit after the chequered flag, a sea of cheering people packed shoulder-to-shoulder with phones and team flags raised, photographers with long lenses pressed against the podium railing, confetti drifting down, golden sunset light."),
     ("Trophy Lift", "trophy_lift", "Driver on the F1 podium hoisting a winner's trophy high overhead with both hands, head tilted back, fireworks and confetti in the background, dramatic stadium lighting."),
     ("Helmet-Off Cockpit", "helmet_off_cockpit", "Driver still seated in the cockpit of his Formula 1 car after the chequered flag, helmet just removed and held in his lap, hair matted with sweat, eyes wide and grinning, mechanics rushing in around the car."),
     ("Garage Hug", "garage_hug", "Driver in race suit being mobbed by mechanics in matching team kit inside an F1 garage, group hug, headsets and laptops in the background, crew laughing."),
