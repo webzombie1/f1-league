@@ -2,7 +2,11 @@
 .git
 __pycache__
 data/
+data.backup.*/
 frontend/node_modules/
+frontend/public/celebration_heroes
+frontend/public/celebration_templates
+frontend/public/driver_refs
 *.pyc
 .DS_Store
 .vscode
