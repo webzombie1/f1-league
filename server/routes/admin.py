@@ -539,12 +539,13 @@ async def create_celebration_template(request: Request):
     if not name or not prompt:
         return {"error": "name and prompt are required."}
     template_id = execute(
-        """INSERT INTO celebration_templates (name, prompt, country_tag, podium_tag, is_active, sort_order)
-           VALUES (?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO celebration_templates (name, prompt, country_tag, podium_tag, is_active, include_driver_refs, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
         (name, prompt,
          (body.get("country_tag") or "").strip(),
          (body.get("podium_tag") or "").strip(),
          1 if body.get("is_active", True) else 0,
+         1 if body.get("include_driver_refs", True) else 0,
          int(body.get("sort_order") or 0)),
         fetch="none"
     )
@@ -556,7 +557,7 @@ async def update_celebration_template(template_id: int, request: Request):
     body = await request.json()
     updates = []
     params = []
-    for field in ("name", "prompt", "country_tag", "podium_tag", "is_active", "sort_order"):
+    for field in ("name", "prompt", "country_tag", "podium_tag", "is_active", "include_driver_refs", "sort_order"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -915,27 +916,34 @@ async def generate_celebration_hero(race_id: int, request: Request):
     if not template.get("image_path"):
         return {"error": "Template has no reference image yet — upload one first."}
 
-    # Collect every available reference image for the driver: the standings
-    # thumbnail, the full-body standing photo, and any extra reference photos
-    # the admin has uploaded. More refs → better likeness from Gemini.
-    ref_photo_rows = execute(
-        "SELECT image_path FROM driver_reference_photos WHERE driver_id = ? ORDER BY sort_order, id",
-        (driver["id"],)
-    )
-    ref_paths = []
-    if driver.get("photo_url"):
-        ref_paths.append(driver["photo_url"])
-    if driver.get("photo_standing"):
-        ref_paths.append(driver["photo_standing"])
-    ref_paths.extend(r["image_path"] for r in ref_photo_rows if r.get("image_path"))
+    # Templates default to including the driver's reference photos for face
+    # likeness. Car-/scene-focused templates (e.g. "car spinning doughnuts")
+    # set include_driver_refs=0 — we then skip loading driver photos and use
+    # a car-focused prompt that explicitly excludes a driver figure.
+    include_driver_refs = bool(template.get("include_driver_refs", 1))
 
     driver_image_bytes = []
-    for p in ref_paths:
-        b = _load_image_bytes(p)
-        if b:
-            driver_image_bytes.append(b)
-    if not driver_image_bytes:
-        return {"error": f"{driver['name']} has no reference photos to use."}
+    if include_driver_refs:
+        # Collect every available reference image for the driver: the standings
+        # thumbnail, the full-body standing photo, and any extra reference photos
+        # the admin has uploaded. More refs → better likeness.
+        ref_photo_rows = execute(
+            "SELECT image_path FROM driver_reference_photos WHERE driver_id = ? ORDER BY sort_order, id",
+            (driver["id"],)
+        )
+        ref_paths = []
+        if driver.get("photo_url"):
+            ref_paths.append(driver["photo_url"])
+        if driver.get("photo_standing"):
+            ref_paths.append(driver["photo_standing"])
+        ref_paths.extend(r["image_path"] for r in ref_photo_rows if r.get("image_path"))
+
+        for p in ref_paths:
+            b = _load_image_bytes(p)
+            if b:
+                driver_image_bytes.append(b)
+        if not driver_image_bytes:
+            return {"error": f"{driver['name']} has no reference photos to use."}
 
     template_bytes = _load_image_bytes(template["image_path"])
     if not template_bytes:
@@ -961,91 +969,25 @@ async def generate_celebration_hero(race_id: int, request: Request):
         )
         if circuit_note:
             venue_line += f"Iconic features to incorporate: {circuit_note} "
-    # Order of multimodal inputs matters: many image-gen models weight the
-    # LAST visual inputs more heavily for identity. Put the scene template
-    # first (so the model treats it as backdrop), then the driver references
-    # last so their face is the dominant identity signal.
-    n_refs = len(driver_image_bytes)
-    template_index = 1
-    refs_start = 2
-    refs_end = 1 + n_refs
-
-    likeness_notes = (driver.get("likeness_notes") or "").strip()
-    likeness_line = (
-        f"\n\nWritten description of the driver to anchor identity (use these features "
-        f"in conjunction with the reference photos): {likeness_notes}\n"
-        if likeness_notes else ""
-    )
-
-    refs_descriptor = (
-        f"Images {refs_start}–{refs_end} are reference portraits of the SAME driver from "
-        "different angles and expressions — use them together to lock in the face, hair, "
-        "build, and overall likeness."
-        if n_refs > 1 else
-        f"Image {refs_start} is a portrait of the driver — preserve their face, hair, and likeness."
-    )
-    prompt = (
-        "You are generating an ultra-wide cinematic hero banner for an amateur sim "
-        "racing league recap website. The image will be displayed as a very wide banner "
-        "across the top of the page (roughly 5:1 visible area), with a dark text "
-        "panel overlaid on the LEFT THIRD of the frame.\n\n"
-        f"Image {template_index} is a SCENE / COMPOSITION reference only. Use it for the "
-        "pose, framing, environment, lighting style, and props (champagne, trophy, "
-        "podium, helmet, etc.). DO NOT copy any face from this scene reference — the "
-        "person shown in the scene reference is irrelevant to identity. Their face must "
-        "be REPLACED with the driver from the portrait references below.\n\n"
-        f"{refs_descriptor} These reference photos are the SOLE source of truth for the "
-        "person's face, hair, build, and identity.\n\n"
-        f"{team_line}{venue_line}"
-        "OUTPUT FORMAT (CRITICAL):\n"
-        "- Produce ONE single, seamless, continuous photograph captured from ONE camera "
-        "  angle. The reference images are inputs only — DO NOT lay them out side by "
-        "  side, DO NOT produce a collage, diptych, split-screen, panel, polyptych, or "
-        "  any kind of multi-panel composition. There must be NO visible vertical or "
-        "  horizontal seam dividing the image. The whole 16:9 frame must read as one "
-        "  unbroken photograph with consistent lighting, depth of field, perspective, "
-        "  and camera position throughout.\n\n"
-        "IDENTITY RULES (highest priority — read carefully):\n"
-        "- The driver in the output is NOT a real, famous, or professional Formula 1 "
-        "  driver. Do not generate Max Verstappen, Lewis Hamilton, Charles Leclerc, "
-        "  Lando Norris, or any other real-world F1 driver. Do not default to a generic "
-        "  young clean-shaven motorsport star. The person you must render is the "
-        "  specific individual shown in the portrait references — likely an everyday "
-        "  adult, possibly older, possibly bearded, possibly wearing glasses, possibly "
-        "  not athletic-looking — exactly as they appear in the references.\n"
-        f"- The output must clearly look like the SAME PERSON shown in images "
-        f"{refs_start}–{refs_end}. Match face shape, eye shape & colour, eyebrows, nose, "
-        "  jawline, beard/stubble pattern, glasses (if present), skin tone, and hair "
-        "  colour & style exactly.\n"
-        "- The face in image 1 (the scene reference) must be IGNORED and replaced by "
-        "  this person's face. Treat image 1 as a photograph from which you keep "
-        "  EVERYTHING EXCEPT the face.\n"
-        "- If the reference person doesn't look like a typical pro racing driver, that's "
-        "  fine — render them as they actually look. Do not stylise or beautify the face.\n"
-        f"{likeness_line}\n"
-        f"Render this single photograph: this specific person in the celebration moment "
-        f"described by the scene reference: {template['prompt']}\n\n"
+    # Composition rules are shared between the driver-focused and car-focused
+    # branches — same banner crop, same right-half placement, same y=55% anchor.
+    # The only difference between branches is the noun used for the subject.
+    composition_rules_for = lambda subject: (
         "COMPOSITION RULES — read carefully, the final crop is VERY aggressive:\n"
         "- The output is 16:9, but it will be displayed in a banner roughly 5:1 wide. "
         "  The visible band on screen is the source image rows from y=40% to y=70% "
         "  (a thin horizontal slice through the middle); the top ~40% and the bottom "
         "  ~30% WILL BE CROPPED OUT.\n"
-        "- ANCHOR THE DRIVER'S CHEST AT y=55% of the image. The center of the upper "
-        "  torso (sternum / mid-chest, where a logo would sit on the race suit) must "
-        "  land at approximately 55% from the top of the 16:9 frame. Position the "
-        "  rest of the body around this anchor — head/helmet upward, hands and any "
-        "  held object (bottle, trophy) downward from there.\n"
-        "- That anchor places the chest at the vertical centre of the cropped banner "
-        "  on the live site, with the face naturally ending up around y=46%–52% and "
-        "  full headroom above.\n"
-        "- Frame the driver TIGHTER than a typical podium shot — the visible band is "
-        "  only 30% of the source height, so the subject needs to be sized so that "
-        "  face, hands, and any held object all comfortably fit within y=40%–70%. "
-        "  A medium close-up (head + chest + hands) reads better here than a full body.\n"
-        "- Everything that matters — face, hands, champagne bottle, trophy, key "
-        "  venue signage, crowd faces — must sit fully within y=40%–70% of the "
-        "  source. Anything outside that band is decorative and will be cropped.\n"
-        "- The driver sits roughly in the RIGHT HALF of the frame.\n"
+        f"- ANCHOR THE {subject.upper()}'S CENTER AT y=55% of the image. Position the "
+        f"  {subject} so its mid-point lands at approximately 55% from the top of the "
+        "  16:9 frame.\n"
+        f"- Frame the {subject} so all of its key features comfortably fit within "
+        "  y=40%-70%. The visible band is only 30% of the source height — too wide a "
+        "  shot wastes detail on cropped pixels.\n"
+        "- Everything that matters — key venue signage, crowd faces, action elements — "
+        "  must sit fully within y=40%-70% of the source. Anything outside that band "
+        "  is decorative and will be cropped.\n"
+        f"- The {subject} sits roughly in the RIGHT HALF of the frame.\n"
         "- The full image must be one consistent, sharply rendered photograph end to "
         "  end. Do NOT add fake blur, vignettes, or low-contrast washes anywhere — "
         "  the left side of the frame must be the same level of sharpness and detail "
@@ -1053,9 +995,114 @@ async def generate_celebration_hero(race_id: int, request: Request):
         "  image at display time, so you do not need to leave the left side empty or "
         "  quiet — fill it with normal scene content (crowd, grandstand, track, sky, "
         "  flags) at full fidelity.\n"
-        "- Photorealistic, crisp focus on the driver, cinematic lighting, 16:9. One "
-        "  photograph, one moment, one camera."
+        "- Photorealistic, crisp focus, cinematic lighting, 16:9. One photograph, "
+        "  one moment, one camera."
     )
+
+    if include_driver_refs:
+        # Order of multimodal inputs matters: many image-gen models weight the
+        # LAST visual inputs more heavily for identity. Put the scene template
+        # first (so the model treats it as backdrop), then the driver references
+        # last so their face is the dominant identity signal.
+        n_refs = len(driver_image_bytes)
+        refs_start = 2
+        refs_end = 1 + n_refs
+
+        likeness_notes = (driver.get("likeness_notes") or "").strip()
+        likeness_line = (
+            f"\n\nWritten description of the driver to anchor identity (use these features "
+            f"in conjunction with the reference photos): {likeness_notes}\n"
+            if likeness_notes else ""
+        )
+
+        refs_descriptor = (
+            f"Images {refs_start}–{refs_end} are reference portraits of the SAME driver from "
+            "different angles and expressions — use them together to lock in the face, hair, "
+            "build, and overall likeness."
+            if n_refs > 1 else
+            f"Image {refs_start} is a portrait of the driver — preserve their face, hair, and likeness."
+        )
+        prompt = (
+            "You are generating an ultra-wide cinematic hero banner for an amateur sim "
+            "racing league recap website. The image will be displayed as a very wide banner "
+            "across the top of the page (roughly 5:1 visible area), with a dark text "
+            "panel overlaid on the LEFT THIRD of the frame.\n\n"
+            "Image 1 is a SCENE / COMPOSITION reference only. Use it for the "
+            "pose, framing, environment, lighting style, and props (champagne, trophy, "
+            "podium, helmet, etc.). DO NOT copy any face from this scene reference — the "
+            "person shown in the scene reference is irrelevant to identity. Their face must "
+            "be REPLACED with the driver from the portrait references below.\n\n"
+            f"{refs_descriptor} These reference photos are the SOLE source of truth for the "
+            "person's face, hair, build, and identity.\n\n"
+            f"{team_line}{venue_line}"
+            "OUTPUT FORMAT (CRITICAL):\n"
+            "- Produce ONE single, seamless, continuous photograph captured from ONE camera "
+            "  angle. The reference images are inputs only — DO NOT lay them out side by "
+            "  side, DO NOT produce a collage, diptych, split-screen, panel, polyptych, or "
+            "  any kind of multi-panel composition. There must be NO visible vertical or "
+            "  horizontal seam dividing the image. The whole 16:9 frame must read as one "
+            "  unbroken photograph with consistent lighting, depth of field, perspective, "
+            "  and camera position throughout.\n\n"
+            "IDENTITY RULES (highest priority — read carefully):\n"
+            "- The driver in the output is NOT a real, famous, or professional Formula 1 "
+            "  driver. Do not generate Max Verstappen, Lewis Hamilton, Charles Leclerc, "
+            "  Lando Norris, or any other real-world F1 driver. Do not default to a generic "
+            "  young clean-shaven motorsport star. The person you must render is the "
+            "  specific individual shown in the portrait references — likely an everyday "
+            "  adult, possibly older, possibly bearded, possibly wearing glasses, possibly "
+            "  not athletic-looking — exactly as they appear in the references.\n"
+            f"- The output must clearly look like the SAME PERSON shown in images "
+            f"{refs_start}–{refs_end}. Match face shape, eye shape & colour, eyebrows, nose, "
+            "  jawline, beard/stubble pattern, glasses (if present), skin tone, and hair "
+            "  colour & style exactly.\n"
+            "- The face in image 1 (the scene reference) must be IGNORED and replaced by "
+            "  this person's face. Treat image 1 as a photograph from which you keep "
+            "  EVERYTHING EXCEPT the face.\n"
+            "- If the reference person doesn't look like a typical pro racing driver, that's "
+            "  fine — render them as they actually look. Do not stylise or beautify the face.\n"
+            f"{likeness_line}\n"
+            f"Render this single photograph: this specific person in the celebration moment "
+            f"described by the scene reference: {template['prompt']}\n\n"
+            + composition_rules_for("driver")
+        )
+    else:
+        # Car-/scene-focused template: no driver portrait refs, no identity rules,
+        # explicitly exclude any human figure from the foreground.
+        car_team_line = (
+            f"The car shown should match {team_name}'s livery — use that team's colours, "
+            "sponsor placement, and overall design language. "
+            if team_name else ""
+        )
+        prompt = (
+            "You are generating an ultra-wide cinematic hero banner for an amateur sim "
+            "racing league recap website. The image will be displayed as a very wide banner "
+            "across the top of the page (roughly 5:1 visible area), with a dark text "
+            "panel overlaid on the LEFT THIRD of the frame.\n\n"
+            "Image 1 is a SCENE / COMPOSITION reference. Use it for pose, framing, "
+            "environment, lighting style, and action (car, smoke, motion blur, crowd, "
+            "trackside details). Do NOT copy the exact car, livery, or any specific "
+            "real-world team identity from this reference — match the team livery "
+            "described below instead.\n\n"
+            f"{car_team_line}{venue_line}"
+            "OUTPUT FORMAT (CRITICAL):\n"
+            "- Produce ONE single, seamless, continuous photograph captured from ONE camera "
+            "  angle. The reference image is an input only — DO NOT lay it out side by "
+            "  side, DO NOT produce a collage, diptych, split-screen, panel, polyptych, or "
+            "  any kind of multi-panel composition. There must be NO visible vertical or "
+            "  horizontal seam dividing the image. The whole 16:9 frame must read as one "
+            "  unbroken photograph with consistent lighting, depth of field, perspective, "
+            "  and camera position throughout.\n\n"
+            "FOCUS RULES (highest priority — read carefully):\n"
+            "- This image is a CAR-/SCENE-focused shot, NOT a driver portrait. Do NOT "
+            "  add a driver figure, podium person, marshal, or any close-up human face "
+            "  in the foreground. Background or distant crowd is fine if implied by the "
+            "  scene, but the foreground subject must be the car or the action described "
+            "  below — never a person.\n"
+            "- Do NOT add helmets being held aloft, drivers leaning out of cars, or any "
+            "  other human-centred celebration motif. The action is the car itself.\n\n"
+            f"Render this single photograph: {template['prompt']}\n\n"
+            + composition_rules_for("car")
+        )
 
     try:
         image_bytes = None
@@ -1193,7 +1240,7 @@ async def generate_celebration_hero(race_id: int, request: Request):
 
                 gclient = g_genai.Client(api_key=GEMINI_API_KEY)
                 g_response = gclient.models.generate_content(
-                    model="gemini-2.5-flash-image",
+                    model="nano-banana-pro-preview",
                     contents=[
                         outpaint_prompt,
                         g_types.Part.from_bytes(data=canvas_bytes, mime_type="image/png"),

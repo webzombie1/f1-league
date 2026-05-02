@@ -140,15 +140,16 @@ CREATE TABLE IF NOT EXISTS tyre_stints (
 );
 
 CREATE TABLE IF NOT EXISTS celebration_templates (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    name            TEXT NOT NULL,
-    image_path      TEXT DEFAULT '',
-    prompt          TEXT NOT NULL,
-    country_tag     TEXT DEFAULT '',
-    podium_tag      TEXT DEFAULT '',
-    is_active       INTEGER DEFAULT 1,
-    sort_order      INTEGER DEFAULT 0,
-    created_at      TEXT DEFAULT (datetime('now'))
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                TEXT NOT NULL,
+    image_path          TEXT DEFAULT '',
+    prompt              TEXT NOT NULL,
+    country_tag         TEXT DEFAULT '',
+    podium_tag          TEXT DEFAULT '',
+    is_active           INTEGER DEFAULT 1,
+    include_driver_refs INTEGER DEFAULT 1,
+    sort_order          INTEGER DEFAULT 0,
+    created_at          TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS driver_reference_photos (
@@ -229,6 +230,7 @@ def init_db():
         ("drivers", "is_ai", "INTEGER DEFAULT 0"),
         ("drivers", "likeness_notes", "TEXT DEFAULT ''"),
         ("race_hero_candidates", "model", "TEXT DEFAULT ''"),
+        ("celebration_templates", "include_driver_refs", "INTEGER DEFAULT 1"),
         ("seasons", "season_start", "TEXT DEFAULT ''"),
         ("seasons", "race_day", "INTEGER DEFAULT 3"),
         ("seasons", "race_time", "TEXT DEFAULT '20:00'"),

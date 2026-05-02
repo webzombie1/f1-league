@@ -41,6 +41,7 @@ export default function ManageCelebrationTemplates() {
       country_tag: draft.country_tag || '',
       podium_tag: draft.podium_tag || '',
       is_active: draft.is_active ? 1 : 0,
+      include_driver_refs: draft.include_driver_refs ?? 1,
     })
     cancelEdit()
     load()
@@ -201,6 +202,15 @@ export default function ManageCelebrationTemplates() {
                         className="accent-[#7ED321]"
                       />
                       Active (eligible for selection)
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-[#999999]">
+                      <input
+                        type="checkbox"
+                        checked={view.include_driver_refs == null ? true : !!view.include_driver_refs}
+                        onChange={e => setDraft({ ...draft, include_driver_refs: e.target.checked ? 1 : 0 })}
+                        className="accent-[#7ED321]"
+                      />
+                      Include driver reference photos (uncheck for car/scene-only templates)
                     </label>
                     <div className="flex gap-2 pt-1">
                       <button onClick={saveEdit} className={btnPrimary}>Save</button>
