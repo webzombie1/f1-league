@@ -879,15 +879,20 @@ async def generate_celebration_hero(race_id: int, request: Request):
         "gemini-3.1-flash-image-preview",
         "gemini-2.5-flash-image",
     }
-    openai_models = {"gpt-image-1"}
+    openai_models = {"gpt-image-1", "gpt-image-1-wide"}
     allowed_models = gemini_models | openai_models
     model_to_use = requested_model if requested_model in allowed_models else "nano-banana-pro-preview"
 
     is_openai = model_to_use in openai_models
+    # gpt-image-1-wide = OpenAI generation followed by a Gemini outpaint pass
+    # that extends the canvas leftward to ~2304x1024 for a more cinematic banner.
+    wide_extend = model_to_use == "gpt-image-1-wide"
     if is_openai and not OPENAI_API_KEY:
         return {"error": "OPENAI_API_KEY not configured."}
     if not is_openai and not GEMINI_API_KEY:
         return {"error": "GEMINI_API_KEY not configured."}
+    if wide_extend and not GEMINI_API_KEY:
+        return {"error": "gpt-image-1-wide also requires GEMINI_API_KEY for the outpaint pass."}
     if not template_id:
         return {"error": "template_id is required."}
 
@@ -981,8 +986,8 @@ async def generate_celebration_hero(race_id: int, request: Request):
     )
     prompt = (
         "You are generating an ultra-wide cinematic hero banner for an amateur sim "
-        "racing league recap website. The image will be displayed as a wide banner "
-        "across the top of the page (roughly 3:1 visible area), with a dark text "
+        "racing league recap website. The image will be displayed as a very wide banner "
+        "across the top of the page (roughly 5:1 visible area), with a dark text "
         "panel overlaid on the LEFT THIRD of the frame.\n\n"
         f"Image {template_index} is a SCENE / COMPOSITION reference only. Use it for the "
         "pose, framing, environment, lighting style, and props (champagne, trophy, "
@@ -1020,21 +1025,25 @@ async def generate_celebration_hero(race_id: int, request: Request):
         f"{likeness_line}\n"
         f"Render this single photograph: this specific person in the celebration moment "
         f"described by the scene reference: {template['prompt']}\n\n"
-        "COMPOSITION RULES — read carefully, the final crop is aggressive:\n"
-        "- The output is 16:9, but it will be displayed in a banner roughly 3:1 wide. "
-        "  The visible band on screen is the source image rows from y=33% to y=73% "
-        "  (a horizontal slice through the middle); the top ~33% and the bottom ~27% "
-        "  WILL BE CROPPED OUT.\n"
-        "- ANCHOR THE DRIVER'S CHEST AT y=53% of the image. The center of the upper "
+        "COMPOSITION RULES — read carefully, the final crop is VERY aggressive:\n"
+        "- The output is 16:9, but it will be displayed in a banner roughly 5:1 wide. "
+        "  The visible band on screen is the source image rows from y=40% to y=70% "
+        "  (a thin horizontal slice through the middle); the top ~40% and the bottom "
+        "  ~30% WILL BE CROPPED OUT.\n"
+        "- ANCHOR THE DRIVER'S CHEST AT y=55% of the image. The center of the upper "
         "  torso (sternum / mid-chest, where a logo would sit on the race suit) must "
-        "  land at approximately 53% from the top of the 16:9 frame. Position the "
+        "  land at approximately 55% from the top of the 16:9 frame. Position the "
         "  rest of the body around this anchor — head/helmet upward, hands and any "
         "  held object (bottle, trophy) downward from there.\n"
         "- That anchor places the chest at the vertical centre of the cropped banner "
-        "  on the live site, with the face naturally ending up around y=38%–45% (in "
-        "  the upper half of the visible band) and full headroom above.\n"
+        "  on the live site, with the face naturally ending up around y=46%–52% and "
+        "  full headroom above.\n"
+        "- Frame the driver TIGHTER than a typical podium shot — the visible band is "
+        "  only 30% of the source height, so the subject needs to be sized so that "
+        "  face, hands, and any held object all comfortably fit within y=40%–70%. "
+        "  A medium close-up (head + chest + hands) reads better here than a full body.\n"
         "- Everything that matters — face, hands, champagne bottle, trophy, key "
-        "  venue signage, crowd faces — must sit fully within y=33%–73% of the "
+        "  venue signage, crowd faces — must sit fully within y=40%–70% of the "
         "  source. Anything outside that band is decorative and will be cropped.\n"
         "- The driver sits roughly in the RIGHT HALF of the frame.\n"
         "- The full image must be one consistent, sharply rendered photograph end to "
@@ -1137,6 +1146,91 @@ async def generate_celebration_hero(race_id: int, request: Request):
             if not image_bytes:
                 return {"error": "Gemini did not return an image."}
 
+        # ── Wide-extend pass (gpt-image-1-wide) ─────────────────────────
+        # Take OpenAI's 1536x1024, place it on the right side of a 2304x1024
+        # transparent canvas, and ask Gemini to fill the empty left strip with
+        # a continuation of the venue. We then PIL-composite the original back
+        # over the right portion (with a 64px feathered edge) so the OpenAI
+        # subject pixels are preserved exactly — Gemini only contributes the
+        # extension, never touches the face. If the Gemini call fails for any
+        # reason, fall back silently to the unextended OpenAI image.
+        if wide_extend:
+            try:
+                import io
+                from PIL import Image
+                from google import genai as g_genai
+                from google.genai import types as g_types
+
+                original = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+                ow, oh = original.size  # expected 1536, 1024
+                extension_px = 768
+                new_w = ow + extension_px  # 2304
+
+                canvas = Image.new("RGBA", (new_w, oh), (0, 0, 0, 0))
+                canvas.paste(original.convert("RGBA"), (extension_px, 0))
+                canvas_buf = io.BytesIO()
+                canvas.save(canvas_buf, format="PNG")
+                canvas_bytes = canvas_buf.getvalue()
+
+                outpaint_prompt = (
+                    "This is a wide cinematic banner image where the LEFT portion "
+                    "is empty/transparent and needs to be filled. The right portion "
+                    "shows a Formula 1 celebration scene at a specific venue with a "
+                    "driver in the foreground. EXTEND THE SCENE LEFTWARD into the "
+                    "empty area: continue the grandstands, crowd, track surface, "
+                    "trackside signage, sky, and lighting naturally outward to the "
+                    "left edge. Match the camera perspective, focal length, depth "
+                    "of field, lighting direction, color palette, and color grading "
+                    "of the right portion EXACTLY. The result must read as ONE "
+                    "seamless continuous photograph end to end, with no visible "
+                    "vertical seam, taken from a single camera position. Do NOT "
+                    "add any new people in the foreground of the extended area — "
+                    "fill it with crowd in the mid/background, grandstand "
+                    "structures, trackside, sky, run-off, or grass as appropriate. "
+                    "Do NOT modify the existing right portion — preserve it pixel-"
+                    "for-pixel. Do NOT change the aspect ratio or crop the image."
+                )
+
+                gclient = g_genai.Client(api_key=GEMINI_API_KEY)
+                g_response = gclient.models.generate_content(
+                    model="gemini-2.5-flash-image",
+                    contents=[
+                        outpaint_prompt,
+                        g_types.Part.from_bytes(data=canvas_bytes, mime_type="image/png"),
+                    ],
+                    config={"response_modalities": ["IMAGE", "TEXT"]},
+                )
+                extended_bytes = None
+                for cand in g_response.candidates or []:
+                    for part in cand.content.parts or []:
+                        if getattr(part, "inline_data", None) and part.inline_data.data:
+                            extended_bytes = part.inline_data.data
+                            break
+                    if extended_bytes:
+                        break
+
+                if extended_bytes:
+                    extended = Image.open(io.BytesIO(extended_bytes)).convert("RGB")
+                    if extended.size != (new_w, oh):
+                        extended = extended.resize((new_w, oh), Image.LANCZOS)
+                    # Build a feathered alpha mask: opaque across the original
+                    # except for a 64px ramp on the LEFT edge that fades from
+                    # 0 → 255. Pasting with this mask blends the seam.
+                    feather = 64
+                    mask = Image.new("L", (ow, oh), 255)
+                    ramp = Image.new("L", (feather, 1))
+                    for x in range(feather):
+                        ramp.putpixel((x, 0), int(255 * x / max(1, feather - 1)))
+                    mask.paste(ramp.resize((feather, oh)), (0, 0))
+                    extended.paste(original, (extension_px, 0), mask)
+                    out_buf = io.BytesIO()
+                    extended.save(out_buf, format="PNG", optimize=True)
+                    image_bytes = out_buf.getvalue()
+                else:
+                    logger.warning("Gemini outpaint returned no image; using OpenAI base.")
+            except Exception:
+                logger.exception("Wide-extend pass failed; using OpenAI base.")
+
         os.makedirs(HEROES_DIR, exist_ok=True)
         filename = f"race_{race_id}_{int(time.time())}.png"
         filepath = os.path.join(HEROES_DIR, filename)
@@ -1211,6 +1305,126 @@ async def delete_hero_candidate(candidate_id: int):
             except OSError:
                 pass
     return {"status": "deleted"}
+
+
+@router.post("/races/{race_id}/edit-hero-candidate")
+async def edit_hero_candidate(race_id: int, request: Request):
+    """Take an existing candidate, send it back through OpenAI's edit endpoint
+    with a targeted edit instruction, save the result as a NEW candidate.
+
+    Output is always 1536x1024 — wide-extension is lost on edit (OpenAI's
+    images.edit only emits its three fixed sizes), but the user can re-run
+    gpt-image-1-wide on the result to widen it again.
+
+    We pass ONLY the source image (not driver reference photos) — the source
+    already has the locked-in face, and adding refs back can cause OpenAI to
+    subtly redraw the face while it's editing the requested region.
+    """
+    body = await request.json()
+    source_id = body.get("source_candidate_id")
+    instruction = (body.get("edit_instruction") or "").strip()
+    if not source_id:
+        return {"error": "source_candidate_id is required."}
+    if not instruction:
+        return {"error": "edit_instruction is required."}
+    if not OPENAI_API_KEY:
+        return {"error": "OPENAI_API_KEY not configured."}
+
+    source = execute(
+        "SELECT * FROM race_hero_candidates WHERE id = ? AND race_id = ?",
+        (source_id, race_id), fetch="one"
+    )
+    if not source:
+        return {"error": "Source candidate not found."}
+
+    source_bytes = _load_image_bytes(source.get("image_path"))
+    if not source_bytes:
+        return {"error": "Couldn't load source image."}
+
+    edit_prompt = (
+        "You are editing an existing hero banner photograph. The user has "
+        "requested ONE targeted change:\n\n"
+        f"EDIT REQUEST: {instruction}\n\n"
+        "Apply ONLY this change. Keep EVERYTHING ELSE in the image identical "
+        "to the input — same composition, same camera angle, same framing, "
+        "same lighting direction, same color palette and grading, same person "
+        "(preserve face shape, eye shape & color, eyebrows, nose, jawline, "
+        "beard/stubble pattern, glasses if present, skin tone, hair colour & "
+        "style EXACTLY), same race suit and helmet, same background, same "
+        "crowd and grandstand, same trackside details, same weather and time "
+        "of day. Do not regenerate, restyle, or recompose the rest of the "
+        "image. Preserve the existing photographic style, sharpness, and "
+        "quality.\n\n"
+        "The output must remain ONE seamless continuous photograph. Do not "
+        "introduce seams, panels, collage, diptych, or any multi-panel "
+        "composition."
+    )
+
+    try:
+        import io
+        import base64
+        from openai import OpenAI
+        try:
+            import pillow_avif  # noqa: F401
+        except ImportError:
+            pass
+        from PIL import Image
+
+        # Same normalisation as the generate endpoint.
+        def _normalise(b: bytes) -> bytes:
+            im = Image.open(io.BytesIO(b))
+            if im.mode != "RGB":
+                im = im.convert("RGB")
+            w, h = im.size
+            m = max(w, h)
+            if m > 1280:
+                s = 1280 / m
+                im = im.resize((int(w * s), int(h * s)), Image.LANCZOS)
+            out = io.BytesIO()
+            im.save(out, format="PNG", optimize=True)
+            return out.getvalue()
+
+        norm = _normalise(source_bytes)
+        buf = io.BytesIO(norm)
+        buf.name = "input_0.png"
+
+        oai = OpenAI(api_key=OPENAI_API_KEY)
+        result = oai.images.edit(
+            model="gpt-image-1",
+            image=[buf],
+            prompt=edit_prompt,
+            size="1536x1024",
+            quality="high",
+        )
+        data = result.data[0]
+        image_bytes = None
+        if getattr(data, "b64_json", None):
+            image_bytes = base64.b64decode(data.b64_json)
+        elif getattr(data, "url", None):
+            image_bytes = urllib.request.urlopen(data.url, timeout=30).read()
+        if not image_bytes:
+            return {"error": "OpenAI did not return an image."}
+
+        os.makedirs(HEROES_DIR, exist_ok=True)
+        filename = f"race_{race_id}_{int(time.time())}.png"
+        filepath = os.path.join(HEROES_DIR, filename)
+        with open(filepath, "wb") as f:
+            f.write(image_bytes)
+        image_path = f"/celebration_heroes/{filename}"
+        candidate_id = execute(
+            """INSERT INTO race_hero_candidates (race_id, image_path, template_id, driver_id, model)
+               VALUES (?, ?, ?, ?, ?)""",
+            (race_id, image_path, source.get("template_id"), source.get("driver_id"), "gpt-image-1-edit"),
+            fetch="none"
+        )
+        return {
+            "candidate_id": candidate_id,
+            "image_path": image_path,
+            "model": "gpt-image-1-edit",
+        }
+    except Exception as e:
+        logger.exception("Hero edit failed")
+        return {"error": f"Edit failed: {str(e)}"}
 
 
 # ─── Highlights ─────────────────────────────────────────────────────

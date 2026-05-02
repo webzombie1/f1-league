@@ -167,7 +167,7 @@ export default function Home() {
   return (
     <div>
       {/* ── Hero Section ── */}
-      <div className="relative w-full h-[420px] overflow-hidden">
+      <div className="relative w-full h-[320px] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-[center_55%]"
           style={{ backgroundImage: `url(${heroImage})` }}

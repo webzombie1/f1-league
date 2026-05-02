@@ -72,15 +72,23 @@ export default function ManageSchedule() {
   const [heroJustGeneratedId, setHeroJustGeneratedId] = useState(null)
   const [heroSelectedId, setHeroSelectedId] = useState(null)
   const [heroModel, setHeroModel] = useState('nano-banana-pro-preview')
+  const [editPromptOpen, setEditPromptOpen] = useState(false)
+  const [editPromptText, setEditPromptText] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [editError, setEditError] = useState('')
 
   const HERO_MODELS = [
     { id: 'nano-banana-pro-preview', label: 'Nano Banana Pro (Gemini, default)' },
     { id: 'gpt-image-1', label: 'GPT Image 1 (OpenAI, best for likeness)' },
+    { id: 'gpt-image-1-wide', label: 'GPT Image 1 + Gemini extend (wider banner, slower)' },
     { id: 'gemini-3-pro-image-preview', label: 'Gemini 3 Pro Image (alt)' },
     { id: 'gemini-3.1-flash-image-preview', label: 'Gemini 3.1 Flash (faster, cheaper)' },
     { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash (legacy)' },
   ]
-  const modelLabel = (id) => HERO_MODELS.find(m => m.id === id)?.label.split(' (')[0] || id
+  const modelLabel = (id) => {
+    if (id === 'gpt-image-1-edit') return 'GPT Image 1 (edited)'
+    return HERO_MODELS.find(m => m.id === id)?.label.split(' (')[0] || id
+  }
 
   const refreshCandidates = async (raceId) => {
     const res = await get(`/admin/races/${raceId}/hero-candidates`).catch(() => null)
@@ -104,6 +112,9 @@ export default function ManageSchedule() {
     setHeroActive(race.hero_image || '')
     setHeroJustGeneratedId(null)
     setHeroSelectedId(null)
+    setEditPromptOpen(false)
+    setEditPromptText('')
+    setEditError('')
     const [templates, suggestion] = await Promise.all([
       get('/admin/celebration-templates'),
       get(`/admin/races/${race.id}/celebration-suggestion`).catch(() => null),
@@ -118,6 +129,9 @@ export default function ManageSchedule() {
   const closeHeroModal = () => {
     setHeroModalRace(null)
     setHeroError('')
+    setEditPromptOpen(false)
+    setEditPromptText('')
+    setEditError('')
   }
 
   const generateHero = async () => {
@@ -155,6 +169,30 @@ export default function ManageSchedule() {
     await del(`/admin/races/hero-candidates/${candidateId}`)
     if (heroModalRace) refreshCandidates(heroModalRace.id)
     if (seasonId) setRaces(await get(`/races?season_id=${seasonId}`))
+  }
+
+  const editCandidate = async () => {
+    if (!heroModalRace || !heroSelectedId || !editPromptText.trim()) return
+    setEditing(true)
+    setEditError('')
+    try {
+      const res = await post(`/admin/races/${heroModalRace.id}/edit-hero-candidate`, {
+        source_candidate_id: heroSelectedId,
+        edit_instruction: editPromptText.trim(),
+      })
+      if (res.error) {
+        setEditError(res.error)
+      } else {
+        await refreshCandidates(heroModalRace.id)
+        setHeroJustGeneratedId(res.candidate_id || null)
+        if (res.candidate_id) setHeroSelectedId(res.candidate_id)
+        setEditPromptText('')
+        setEditPromptOpen(false)
+      }
+    } catch (e) {
+      setEditError(e.message || 'Edit failed.')
+    }
+    setEditing(false)
   }
 
   const setRaceDate = async (raceId, newDate) => {
@@ -843,15 +881,15 @@ export default function ManageSchedule() {
 
                 {/* Large preview */}
                 <div className="aspect-[16/9] bg-[#0D1117] border border-[#1F1F1F] rounded overflow-hidden flex items-center justify-center relative">
-                  {heroGenerating ? (
+                  {heroGenerating || editing ? (
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-10 h-10 border-3 border-[#1F1F1F] border-t-[#7ED321] rounded-full animate-spin" />
-                      <p className="text-sm text-[#999999]">Generating… 20–40s with the pro model.</p>
+                      <p className="text-sm text-[#999999]">{editing ? 'Editing… 20–40s.' : 'Generating… 20–40s with the pro model.'}</p>
                     </div>
                   ) : selected ? (
-                    <img src={selected.image_path} alt="" className="w-full h-full object-cover" />
+                    <img src={selected.image_path} alt="" className="w-full h-full object-contain" />
                   ) : heroActive ? (
-                    <img src={heroActive} alt="" className="w-full h-full object-cover" />
+                    <img src={heroActive} alt="" className="w-full h-full object-contain" />
                   ) : (
                     <p className="text-[#555] text-xs uppercase tracking-wider">
                       Pick a template and click Generate to create your first candidate
@@ -860,7 +898,7 @@ export default function ManageSchedule() {
                 </div>
 
                 {/* Preview caption + actions */}
-                {selected && !heroGenerating && (
+                {selected && !heroGenerating && !editing && (
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-sm text-[#E8ECF4] truncate">
@@ -887,6 +925,53 @@ export default function ManageSchedule() {
                         {previewIsActive ? 'In use' : 'Use this image'}
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Edit-with-AI panel — collapsed disclosure under the actions */}
+                {selected && !heroGenerating && (
+                  <div className="border-t border-[#1F1F1F] pt-3">
+                    {!editPromptOpen ? (
+                      <button
+                        onClick={() => setEditPromptOpen(true)}
+                        disabled={editing}
+                        className="text-xs text-[#999999] hover:text-[#7ED321] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                      >+ Edit with AI</button>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="block text-[10px] text-[#999999] uppercase tracking-wider">
+                          Describe what to change (everything else stays the same)
+                        </label>
+                        <textarea
+                          value={editPromptText}
+                          onChange={e => setEditPromptText(e.target.value)}
+                          placeholder="e.g. The driver's hands look distorted — fix the fingers so they're anatomically correct."
+                          rows={3}
+                          disabled={editing}
+                          className="w-full bg-[#0D1117] border border-[#1F1F1F] rounded px-3 py-2 text-sm text-[#E8ECF4] resize-none disabled:opacity-50"
+                        />
+                        {selected.model === 'gpt-image-1-wide' && (
+                          <p className="text-[10px] text-[#999999] italic">
+                            Note: editing a wide candidate produces a 1536×1024 result. Re-run "GPT Image 1 + Gemini extend" on it to widen again.
+                          </p>
+                        )}
+                        {editError && <p className="text-xs text-red-400">{editError}</p>}
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => { setEditPromptOpen(false); setEditPromptText(''); setEditError('') }}
+                            disabled={editing}
+                            className={btnSecondary}
+                          >Cancel</button>
+                          <button
+                            onClick={editCandidate}
+                            disabled={editing || !editPromptText.trim()}
+                            className={`${btnPrimary} disabled:opacity-50 disabled:cursor-not-allowed`}
+                          >
+                            {editing ? 'Editing…' : 'Apply edit'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
