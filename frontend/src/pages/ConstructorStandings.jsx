@@ -38,11 +38,7 @@ export default function ConstructorStandings() {
         >Constructors</Link>
       </div>
 
-      <div className="-mt-6">
-        <StandingsChart races={timeline.races} items={timeline.teams} mode="constructors" />
-      </div>
-
-      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-hidden">
+      <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-hidden -mt-6">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#1F1F1F] text-[#999999] text-xs uppercase tracking-wider">
@@ -77,6 +73,10 @@ export default function ConstructorStandings() {
         {standings.length === 0 && (
           <p className="text-center text-[#777777] text-sm py-8">No standings data yet.</p>
         )}
+      </div>
+
+      <div>
+        <StandingsChart races={timeline.races} items={timeline.teams} mode="constructors" />
       </div>
     </div>
   )

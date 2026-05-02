@@ -17,6 +17,7 @@ function formatTime(timeStr) {
 
 export default function Schedule() {
   const [races, setRaces] = useState([])
+  const [articleByRace, setArticleByRace] = useState({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -24,6 +25,13 @@ export default function Schedule() {
       .then(setRaces)
       .catch(() => {})
       .finally(() => setLoading(false))
+    get('/articles')
+      .then(arts => {
+        const map = {}
+        for (const a of arts || []) if (a.race_id) map[a.race_id] = a.id
+        setArticleByRace(map)
+      })
+      .catch(() => {})
   }, [])
 
   if (loading) {
@@ -96,12 +104,21 @@ export default function Schedule() {
             </div>
             {race.status === 'completed' && (
               <div className="px-4 pb-3">
-                <Link
-                  to={`/race/${race.id}`}
-                  className="text-xs text-[#0D1117] hover:underline uppercase tracking-wider font-bold"
-                >
-                  Full Results →
-                </Link>
+                {articleByRace[race.id] ? (
+                  <Link
+                    to={`/article/${articleByRace[race.id]}`}
+                    className="text-xs text-[#0D1117] hover:underline uppercase tracking-wider font-bold"
+                  >
+                    Recap →
+                  </Link>
+                ) : (
+                  <Link
+                    to={`/race/${race.id}`}
+                    className="text-xs text-[#0D1117] hover:underline uppercase tracking-wider font-bold"
+                  >
+                    Full Results →
+                  </Link>
+                )}
               </div>
             )}
           </div>

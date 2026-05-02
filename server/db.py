@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS celebration_templates (
     podium_tag          TEXT DEFAULT '',
     is_active           INTEGER DEFAULT 1,
     include_driver_refs INTEGER DEFAULT 1,
+    match_template      INTEGER DEFAULT 0,
     sort_order          INTEGER DEFAULT 0,
     created_at          TEXT DEFAULT (datetime('now'))
 );
@@ -231,6 +232,7 @@ def init_db():
         ("drivers", "likeness_notes", "TEXT DEFAULT ''"),
         ("race_hero_candidates", "model", "TEXT DEFAULT ''"),
         ("celebration_templates", "include_driver_refs", "INTEGER DEFAULT 1"),
+        ("celebration_templates", "match_template", "INTEGER DEFAULT 0"),
         ("seasons", "season_start", "TEXT DEFAULT ''"),
         ("seasons", "race_day", "INTEGER DEFAULT 3"),
         ("seasons", "race_time", "TEXT DEFAULT '20:00'"),

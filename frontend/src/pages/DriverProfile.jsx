@@ -25,28 +25,39 @@ export default function DriverProfile() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      <div>
-        <Link to="/standings" className="text-sm text-[#7ED321] hover:underline">← Standings</Link>
-        <div className="flex items-center gap-3 mt-2">
-          <div
-            className="w-2 h-8 rounded-full"
-            style={{ backgroundColor: driver.team_color || '#555' }}
-          />
+      <div className="flex items-start gap-4">
+        <div className="flex-1 min-w-0 space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#E8ECF4]">{driver.name}</h1>
-            <p className="text-sm text-[#999999]">
-              #{driver.number || '?'} — {driver.team_name || 'No team'}
-            </p>
+            <Link to="/standings" className="text-sm text-[#7ED321] hover:underline">← Standings</Link>
+            <div className="flex items-center gap-3 mt-2">
+              <div
+                className="w-2 h-8 rounded-full"
+                style={{ backgroundColor: driver.team_color || '#555' }}
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-[#E8ECF4]">{driver.name}</h1>
+                <p className="text-sm text-[#999999]">
+                  #{driver.number || '?'} — {driver.team_name || 'No team'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-8 items-start">
+            <StatBadge label="Points" value={driver.total_points} />
+            <StatBadge label="Wins" value={driver.wins} />
+            <StatBadge label="Podiums" value={driver.podiums} />
+            <StatBadge label="Best" value={driver.best_finish ? `P${driver.best_finish}` : '-'} />
+            <StatBadge label="DNFs" value={driver.dnfs} />
           </div>
         </div>
-      </div>
-
-      <div className="flex gap-8">
-        <StatBadge label="Points" value={driver.total_points} />
-        <StatBadge label="Wins" value={driver.wins} />
-        <StatBadge label="Podiums" value={driver.podiums} />
-        <StatBadge label="Best" value={driver.best_finish ? `P${driver.best_finish}` : '-'} />
-        <StatBadge label="DNFs" value={driver.dnfs} />
+        {driver.photo_standing && (
+          <img
+            src={driver.photo_standing}
+            alt={driver.name}
+            className="self-end -mb-6 h-80 object-contain object-bottom pointer-events-none"
+          />
+        )}
       </div>
 
       <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-hidden">

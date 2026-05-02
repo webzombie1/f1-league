@@ -42,6 +42,7 @@ export default function ManageCelebrationTemplates() {
       podium_tag: draft.podium_tag || '',
       is_active: draft.is_active ? 1 : 0,
       include_driver_refs: draft.include_driver_refs ?? 1,
+      match_template: draft.match_template ? 1 : 0,
     })
     cancelEdit()
     load()
@@ -211,6 +212,15 @@ export default function ManageCelebrationTemplates() {
                         className="accent-[#7ED321]"
                       />
                       Include driver reference photos (uncheck for car/scene-only templates)
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-[#999999]">
+                      <input
+                        type="checkbox"
+                        checked={!!view.match_template}
+                        onChange={e => setDraft({ ...draft, match_template: e.target.checked ? 1 : 0 })}
+                        className="accent-[#7ED321]"
+                      />
+                      Match template image faithfully (skip venue invention; only swap face if visible — keep helmet/visor as-is)
                     </label>
                     <div className="flex gap-2 pt-1">
                       <button onClick={saveEdit} className={btnPrimary}>Save</button>

@@ -539,13 +539,14 @@ async def create_celebration_template(request: Request):
     if not name or not prompt:
         return {"error": "name and prompt are required."}
     template_id = execute(
-        """INSERT INTO celebration_templates (name, prompt, country_tag, podium_tag, is_active, include_driver_refs, sort_order)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        """INSERT INTO celebration_templates (name, prompt, country_tag, podium_tag, is_active, include_driver_refs, match_template, sort_order)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (name, prompt,
          (body.get("country_tag") or "").strip(),
          (body.get("podium_tag") or "").strip(),
          1 if body.get("is_active", True) else 0,
          1 if body.get("include_driver_refs", True) else 0,
+         1 if body.get("match_template", False) else 0,
          int(body.get("sort_order") or 0)),
         fetch="none"
     )
@@ -557,7 +558,7 @@ async def update_celebration_template(template_id: int, request: Request):
     body = await request.json()
     updates = []
     params = []
-    for field in ("name", "prompt", "country_tag", "podium_tag", "is_active", "include_driver_refs", "sort_order"):
+    for field in ("name", "prompt", "country_tag", "podium_tag", "is_active", "include_driver_refs", "match_template", "sort_order"):
         if field in body:
             updates.append(f"{field} = ?")
             params.append(body[field])
@@ -921,6 +922,12 @@ async def generate_celebration_hero(race_id: int, request: Request):
     # set include_driver_refs=0 — we then skip loading driver photos and use
     # a car-focused prompt that explicitly excludes a driver figure.
     include_driver_refs = bool(template.get("include_driver_refs", 1))
+    # When match_template=1 the AI is told to faithfully recreate the template
+    # image (preserve framing, pose, environment, mood) rather than build a new
+    # scene around it. Skips venue invention. Driver likeness still applied if
+    # include_driver_refs=1 and the template figure's face is visible (helmet
+    # + visor → leave the face alone).
+    match_template = bool(template.get("match_template", 0))
 
     driver_image_bytes = []
     if include_driver_refs:
@@ -949,8 +956,17 @@ async def generate_celebration_hero(race_id: int, request: Request):
     if not template_bytes:
         return {"error": "Couldn't load template reference image."}
 
-    team = execute("SELECT name, color FROM teams WHERE id = ?", (driver.get("team_id"),), fetch="one") if driver.get("team_id") else None
+    team = execute("SELECT name, color, car_image FROM teams WHERE id = ?", (driver.get("team_id"),), fetch="one") if driver.get("team_id") else None
     team_name = team["name"] if team else ""
+
+    # Car-/scene-focused templates: pass the team's car artwork as a second
+    # reference so the AI matches the actual livery (colors, sponsors, design)
+    # instead of inventing a generic one. Driver-portrait templates skip this
+    # because the driver photos already carry team identity via the race suit.
+    if not include_driver_refs and team and team.get("car_image"):
+        car_ref = _load_image_bytes(team["car_image"])
+        if car_ref:
+            driver_image_bytes.append(car_ref)
 
     team_line = (
         f"The driver races for {team_name}; use that team's race suit and helmet colours where appropriate. "
@@ -999,7 +1015,78 @@ async def generate_celebration_hero(race_id: int, request: Request):
         "  one moment, one camera."
     )
 
-    if include_driver_refs:
+    if match_template:
+        # Faithful-recreation prompt: trust the template image as the canonical
+        # scene. Skip venue invention. Driver likeness applied conditionally —
+        # only when the figure's face is visible in the template.
+        n_refs = len(driver_image_bytes)
+        refs_start = 2
+        refs_end = 1 + n_refs
+        if include_driver_refs and n_refs > 0:
+            likeness_block = (
+                f"Images {refs_start}–{refs_end} are reference portraits of the driver.\n\n"
+                "FACE HANDLING — read carefully:\n"
+                "- IF AND ONLY IF the figure in Image 1 has their face clearly "
+                "  visible (no helmet covering the face, no visor down, not turned "
+                "  away from camera), replace that face with this driver's likeness. "
+                "  Match face shape, eyebrows, nose, jawline, beard/stubble, "
+                "  glasses (if present), skin tone, and hair colour & style exactly "
+                "  to the reference portraits. Keep pose, body, clothing, and the "
+                "  rest of the scene identical to Image 1.\n"
+                "- IF the figure wears a helmet with the visor down, OR the face "
+                "  is otherwise obscured (back to camera, distant, motion-blurred), "
+                "  leave them entirely as-is in Image 1. Do NOT insert a face. "
+                "  Do NOT remove the helmet.\n\n"
+            )
+        elif n_refs > 0:  # car ref present (no driver portraits)
+            likeness_block = (
+                f"Image {refs_start} is a reference of the team's actual car. If a "
+                f"car appears in Image 1, apply this car's livery (colours, sponsor "
+                f"logos and placement, design language) to it. Otherwise do not "
+                f"alter Image 1's composition or anything else about the scene.\n\n"
+            )
+        else:
+            likeness_block = (
+                "Recreate Image 1 as faithfully as possible. Preserve any figures, "
+                "vehicles, and objects in it as they appear.\n\n"
+            )
+        prompt = (
+            "You are recreating a hero banner that is FAITHFUL to Image 1, the "
+            "reference image. Image 1 is your CANONICAL source of truth — match "
+            "its framing, composition, camera angle, environment, props, lighting, "
+            "mood, pose, and visual style as closely as possible. The output "
+            "should look like a high-fidelity recreation of Image 1, not a "
+            "re-imagining.\n\n"
+            "DO NOT invent or substitute a different venue, location, track, or "
+            "stadium. The environment in the output must match what's shown in "
+            "Image 1 — do not add real F1 circuit elements, grandstands, signage, "
+            "team logos, flags, or other location-specific details that aren't "
+            "already present in Image 1.\n\n"
+            f"{likeness_block}"
+            "OUTPUT FORMAT (CRITICAL):\n"
+            "- Produce ONE single, seamless, continuous photograph captured from "
+            "  ONE camera angle. The reference images are inputs only — DO NOT "
+            "  lay them out side by side, DO NOT produce a collage, diptych, "
+            "  split-screen, panel, polyptych, or any kind of multi-panel "
+            "  composition. There must be NO visible vertical or horizontal seam "
+            "  dividing the image. The whole 16:9 frame must read as one unbroken "
+            "  photograph.\n\n"
+            "COMPOSITION (banner crop):\n"
+            "- The output is 16:9, displayed in a banner roughly 5:1 wide. The "
+            "  visible band on screen is the source image rows from y=40% to "
+            "  y=70% — the top ~40% and bottom ~30% WILL BE CROPPED OUT.\n"
+            "- Match Image 1's composition. If the subject in Image 1 is already "
+            "  positioned within the y=40%-70% band, preserve that exactly. If "
+            "  the subject is positioned outside that band, gently reframe so "
+            "  key elements fall within it — but otherwise keep Image 1's "
+            "  framing intact.\n"
+            "- Do NOT add fake blur, vignettes, or low-contrast washes anywhere. "
+            "  The full image must be sharply rendered end to end at consistent "
+            "  fidelity.\n"
+            "- Photorealistic, crisp focus, cinematic lighting, 16:9. One "
+            "  photograph, one moment, one camera."
+        )
+    elif include_driver_refs:
         # Order of multimodal inputs matters: many image-gen models weight the
         # LAST visual inputs more heavily for identity. Put the scene template
         # first (so the model treats it as backdrop), then the driver references
@@ -1068,10 +1155,18 @@ async def generate_celebration_hero(race_id: int, request: Request):
     else:
         # Car-/scene-focused template: no driver portrait refs, no identity rules,
         # explicitly exclude any human figure from the foreground.
+        has_car_ref = len(driver_image_bytes) > 0  # actually a car ref in this branch
+        car_ref_line = (
+            "Image 2 is a reference of the team's actual car. Use it as the SOLE "
+            "source of truth for the car's LIVERY: paint colours, sponsor logos and "
+            "their placement, halo and engine cover design, sidepod shape, front "
+            "wing endplate detail, and overall colour blocking. The car in the "
+            "output must look like THIS car — not a generic F1 car, not a different "
+            "team's car. Do not invent sponsor logos.\n\n"
+            if has_car_ref else ""
+        )
         car_team_line = (
-            f"The car shown should match {team_name}'s livery — use that team's colours, "
-            "sponsor placement, and overall design language. "
-            if team_name else ""
+            f"This is {team_name}'s car. " if team_name else ""
         )
         prompt = (
             "You are generating an ultra-wide cinematic hero banner for an amateur sim "
@@ -1079,10 +1174,10 @@ async def generate_celebration_hero(race_id: int, request: Request):
             "across the top of the page (roughly 5:1 visible area), with a dark text "
             "panel overlaid on the LEFT THIRD of the frame.\n\n"
             "Image 1 is a SCENE / COMPOSITION reference. Use it for pose, framing, "
-            "environment, lighting style, and action (car, smoke, motion blur, crowd, "
-            "trackside details). Do NOT copy the exact car, livery, or any specific "
-            "real-world team identity from this reference — match the team livery "
-            "described below instead.\n\n"
+            "environment, lighting style, and action (smoke, motion blur, crowd, "
+            "trackside details). Do NOT copy the car, livery, or any specific "
+            "real-world team identity from this reference.\n\n"
+            f"{car_ref_line}"
             f"{car_team_line}{venue_line}"
             "OUTPUT FORMAT (CRITICAL):\n"
             "- Produce ONE single, seamless, continuous photograph captured from ONE camera "

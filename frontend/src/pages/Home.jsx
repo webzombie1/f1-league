@@ -231,9 +231,9 @@ export default function Home() {
         <div className="bg-[#131313] border-y border-[#1F1F1F]">
           <div className="max-w-6xl mx-auto px-4 py-4">
             <div className="flex items-center gap-3 mb-3">
-              <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#999999]">Race Results</h2>
+              <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#7ED321]">Race Results</h2>
               <span className="text-xs text-[#777777]">—</span>
-              <span className="text-xs text-[#777777]">{lastRace?.track_name}</span>
+              <span className="text-xs text-[#7ED321]">{lastRace?.track_name}</span>
             </div>
             <div className="relative flex items-center">
               {/* Left arrow */}
