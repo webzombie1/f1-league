@@ -167,25 +167,27 @@ export default function Home() {
   return (
     <div>
       {/* ── Hero Section ── */}
-      <div className="relative w-full max-w-[1400px] mx-auto h-[529px] overflow-hidden">
+      <div className="relative w-full max-w-[1400px] mx-auto md:h-[529px] md:overflow-hidden">
+        {/* Image — block flow on mobile (sits above the text), absolute fill on md+ (overlaid). */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="w-full h-[220px] bg-cover bg-center md:absolute md:inset-0 md:h-full"
           style={{
             backgroundImage: `url(${heroImage})`,
             maskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0D1117] via-[#0D1117]/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0D1117]/80 to-transparent" />
+        {/* Gradients are only meaningful when text is overlaid — desktop only. */}
+        <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-[#0D1117] via-[#0D1117]/60 to-transparent" />
+        <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-[#0D1117]/80 to-transparent" />
 
-        <div className="relative h-full max-w-6xl mx-auto px-4 flex flex-col justify-end pb-10">
-          <p className="text-sm font-black uppercase tracking-[0.2em] text-[#7ED321] mb-0">
+        <div className="px-4 py-6 md:py-0 md:relative md:h-full md:max-w-6xl md:mx-auto md:flex md:flex-col md:justify-end md:pb-10">
+          <p className="text-xs md:text-sm font-black uppercase tracking-[0.2em] text-[#7ED321] mb-3 md:mb-0">
             {lastRace ? `Round ${lastRace.round_number} · ${lastRace.country}` : 'Up Next'}
           </p>
           {lastRace && heroHeadline ? (
-            <div className="bg-black/50 backdrop-blur-sm rounded-lg p-6 mt-2 w-1/2 self-start">
-              <h1 className="text-[22.5px] md:text-[27px] font-black text-white uppercase tracking-tight leading-tight">
+            <div className="mt-2 self-start md:bg-black/50 md:backdrop-blur-sm md:rounded-lg md:p-6 md:w-1/2">
+              <h1 className="text-2xl md:text-[27px] font-black text-white uppercase tracking-tight leading-tight">
                 {heroHeadline}
               </h1>
               {heroSubtitle && (
@@ -195,31 +197,31 @@ export default function Home() {
               )}
               <Link
                 to={latestArticle ? `/article/${latestArticle.id}` : `/race/${lastRace.id}`}
-                className="inline-flex items-center mt-5 bg-[#7ED321] hover:bg-[#6BC11A] text-[#0D1117] font-black uppercase text-xs tracking-wider px-6 py-3 rounded-md transition-colors w-fit shadow-lg shadow-[#7ED321]/20"
+                className="flex items-center mt-5 bg-[#7ED321] hover:bg-[#6BC11A] text-[#0D1117] font-black uppercase text-xs tracking-wider px-6 py-3 rounded-md transition-colors w-fit mx-auto md:mx-0 shadow-lg shadow-[#7ED321]/20"
               >
                 {latestArticle ? 'Full Story' : 'Full Results'}
               </Link>
             </div>
           ) : heroRace ? (
             <>
-              <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight">
+              <h1 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight leading-tight">
                 {heroRace.track_name}
               </h1>
-              <p className="text-lg text-[#999999] mt-3">
+              <p className="text-base md:text-lg text-[#999999] mt-3">
                 Round {heroRace.round_number} · {heroRace.country}
                 {heroRace.date ? ` · ${heroRace.date}` : ''}
               </p>
               {lastRace && (
                 <Link
                   to={`/race/${lastRace.id}`}
-                  className="inline-flex items-center mt-5 bg-[#7ED321] hover:bg-[#6BC11A] text-[#0D1117] font-bold uppercase text-sm tracking-wider px-6 py-3 rounded transition-colors w-fit"
+                  className="flex items-center mt-5 bg-[#7ED321] hover:bg-[#6BC11A] text-[#0D1117] font-bold uppercase text-sm tracking-wider px-6 py-3 rounded transition-colors w-fit mx-auto md:mx-0"
                 >
                   View Results
                 </Link>
               )}
             </>
           ) : (
-            <h1 className="text-4xl md:text-5xl font-black text-white uppercase tracking-tight">
+            <h1 className="text-3xl md:text-5xl font-black text-white uppercase tracking-tight">
               {season?.name || 'GDR League'}
             </h1>
           )}
@@ -230,25 +232,25 @@ export default function Home() {
       {results.length > 0 && (
         <div className="bg-[#131313] border-y border-[#1F1F1F]">
           <div className="max-w-6xl mx-auto px-4 py-4">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center justify-center md:justify-start gap-3 mb-3">
               <h2 className="text-xs font-bold uppercase tracking-[0.15em] text-[#7ED321]">Race Results</h2>
               <span className="text-xs text-[#777777]">—</span>
               <span className="text-xs text-[#7ED321]">{lastRace?.track_name}</span>
             </div>
             <div className="relative flex items-center">
-              {/* Left arrow */}
+              {/* Left arrow — desktop only */}
               <button
                 onClick={() => scroll('left')}
-                className="absolute left-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-[#191919] border border-[#1F1F1F] text-[#999999] hover:text-[#E8ECF4] hover:bg-[#1F1F1F] transition-colors -ml-4 shadow-lg"
+                className="absolute left-0 z-10 w-8 h-8 hidden md:flex items-center justify-center rounded-full bg-[#191919] border border-[#1F1F1F] text-[#999999] hover:text-[#E8ECF4] hover:bg-[#1F1F1F] transition-colors -ml-4 shadow-lg"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
 
-              {/* Scrollable area */}
-              <div ref={scrollRef} className="overflow-x-auto scrollbar-hide mx-6" style={{ scrollbarWidth: 'none' }}>
-                <div className="flex gap-1.5" style={{ minWidth: 'max-content' }}>
+              {/* Scrollable area — overflow only on md+, mobile gets a 2-col grid */}
+              <div ref={scrollRef} className="w-full md:overflow-x-auto md:scrollbar-hide md:mx-6" style={{ scrollbarWidth: 'none' }}>
+                <div className="grid grid-cols-2 gap-1.5 md:flex md:gap-1.5 md:min-w-max">
                 {results.map((r) => {
                   const pos = r.status === 'finished' ? r.position : null
                   const isTop3 = pos && pos <= 3
@@ -257,7 +259,7 @@ export default function Home() {
                   return (
                     <div
                       key={r.id}
-                      className="flex-shrink-0 w-[170px] rounded-xl bg-[#191919] border border-[#1F1F1F] overflow-hidden hover:bg-[#1F1F1F] transition-colors shadow-md shadow-black/20"
+                      className="md:flex-shrink-0 md:w-[170px] rounded-xl bg-[#191919] border border-[#1F1F1F] overflow-hidden hover:bg-[#1F1F1F] transition-colors shadow-md shadow-black/20"
                     >
                       {/* Position overlapping the team color bar + car image */}
                       <div className="relative h-7 overflow-hidden">
@@ -333,7 +335,7 @@ export default function Home() {
               {/* Right arrow */}
               <button
                 onClick={() => scroll('right')}
-                className="absolute right-0 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-[#191919] border border-[#1F1F1F] text-[#999999] hover:text-[#E8ECF4] hover:bg-[#1F1F1F] transition-colors -mr-4 shadow-lg"
+                className="absolute right-0 z-10 w-8 h-8 hidden md:flex items-center justify-center rounded-full bg-[#191919] border border-[#1F1F1F] text-[#999999] hover:text-[#E8ECF4] hover:bg-[#1F1F1F] transition-colors -mr-4 shadow-lg"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />

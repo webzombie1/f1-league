@@ -29,6 +29,66 @@ function NavItem({ to, label, onClick }) {
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  // GDR pennant + tyre + trophy lockup — same on mobile and desktop.
+  const gdrLogo = (
+    <NavLink to="/" className="relative mx-4 inline-block" style={{ zIndex: 60 }}>
+      <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 w-[150px] pointer-events-none" style={{ height: '72px' }}>
+        <div className="w-full bg-[#2a2a2a]" style={{ height: '60px', padding: '0 4px' }}>
+          <div className="w-full h-full bg-gradient-to-b from-[#1a1a1a] to-[#111111]" />
+        </div>
+        <div className="w-0 h-0 mx-auto" style={{
+          borderLeft: '75px solid #2a2a2a',
+          borderRight: '75px solid #2a2a2a',
+          borderBottom: '14px solid transparent',
+        }} />
+        <div className="w-0 h-0 mx-auto absolute" style={{
+          borderLeft: '71px solid #111111',
+          borderRight: '71px solid #111111',
+          borderBottom: '12px solid transparent',
+          bottom: '0', left: '50%', transform: 'translateX(-50%)',
+        }} />
+      </div>
+      <div className="relative flex items-center gap-2 h-14 justify-center overflow-hidden" style={{ width: '150px' }}>
+        <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 select-none pointer-events-none opacity-70" viewBox="0 0 200 200" fill="none">
+          <circle cx="100" cy="100" r="95" fill="#1a1a1a" stroke="#2a2a2a" strokeWidth="2" />
+          <circle cx="100" cy="100" r="95" fill="none" stroke="#222" strokeWidth="24" />
+          {[...Array(20)].map((_, i) => {
+            const angle = (i * 18) * Math.PI / 180
+            const x1 = 100 + Math.cos(angle) * 82
+            const y1 = 100 + Math.sin(angle) * 82
+            const x2 = 100 + Math.cos(angle + 0.12) * 96
+            const y2 = 100 + Math.sin(angle + 0.12) * 96
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#111" strokeWidth="3" />
+          })}
+          <circle cx="100" cy="100" r="70" fill="#111" stroke="#2a2a2a" strokeWidth="1.5" />
+          <circle cx="100" cy="100" r="58" fill="#191919" stroke="#333" strokeWidth="2" />
+          {[...Array(10)].map((_, i) => {
+            const angle = (i * 36) * Math.PI / 180
+            const x1 = 100 + Math.cos(angle) * 18
+            const y1 = 100 + Math.sin(angle) * 18
+            const x2 = 100 + Math.cos(angle) * 54
+            const y2 = 100 + Math.sin(angle) * 54
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#2a2a2a" strokeWidth="5" strokeLinecap="round" />
+          })}
+          {[...Array(10)].map((_, i) => {
+            const angle = ((i * 36) + 18) * Math.PI / 180
+            const x = 100 + Math.cos(angle) * 38
+            const y = 100 + Math.sin(angle) * 38
+            return <circle key={i} cx={x} cy={y} r="7" fill="#111" />
+          })}
+          <circle cx="100" cy="100" r="16" fill="#1a1a1a" stroke="#333" strokeWidth="2" />
+          <circle cx="100" cy="100" r="7" fill="#222" stroke="#333" strokeWidth="1" />
+          <circle cx="100" cy="100" r="3" fill="#2a2a2a" />
+        </svg>
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-60 select-none pointer-events-none" style={{ fontSize: '3.15rem' }}>🏆</span>
+        <span className="relative bg-[#0a0a0a]/90 px-1 py-0 rounded-sm flex items-center gap-1">
+          <span className="text-xl font-black tracking-tight text-[#7ED321]">GDR</span>
+          <span className="text-xl font-light tracking-tight text-[#E8ECF4]">LEAGUE</span>
+        </span>
+      </div>
+    </NavLink>
+  )
+
   return (
     <div className="min-h-screen bg-[#0D1117] text-[#E8ECF4] relative">
       {/* Background track image */}
@@ -74,84 +134,17 @@ export default function Layout() {
             </nav>
 
             {/* GDR League logo with pennant banner */}
-            <NavLink to="/" className="relative mx-4" style={{ zIndex: 60 }}>
-              <div className="absolute -top-[1px] left-1/2 -translate-x-1/2 w-[150px] pointer-events-none" style={{ height: '72px' }}>
-                <div className="w-full bg-[#2a2a2a]" style={{ height: '60px', padding: '0 4px' }}>
-                  <div className="w-full h-full bg-gradient-to-b from-[#1a1a1a] to-[#111111]" />
-                </div>
-                <div className="w-0 h-0 mx-auto" style={{
-                  borderLeft: '75px solid #2a2a2a',
-                  borderRight: '75px solid #2a2a2a',
-                  borderBottom: '14px solid transparent',
-                }} />
-                <div className="w-0 h-0 mx-auto absolute" style={{
-                  borderLeft: '71px solid #111111',
-                  borderRight: '71px solid #111111',
-                  borderBottom: '12px solid transparent',
-                  bottom: '0', left: '50%', transform: 'translateX(-50%)',
-                }} />
-              </div>
-              <div className="relative flex items-center gap-2 h-14 justify-center overflow-hidden" style={{ width: '150px' }}>
-                {/* F1 tyre behind trophy */}
-                <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 select-none pointer-events-none opacity-70" viewBox="0 0 200 200" fill="none">
-                  {/* Outer rubber */}
-                  <circle cx="100" cy="100" r="95" fill="#1a1a1a" stroke="#2a2a2a" strokeWidth="2" />
-                  {/* Tread surface */}
-                  <circle cx="100" cy="100" r="95" fill="none" stroke="#222" strokeWidth="24" />
-                  {/* Tread grooves — diagonal slashes around the tyre */}
-                  {[...Array(20)].map((_, i) => {
-                    const angle = (i * 18) * Math.PI / 180
-                    const x1 = 100 + Math.cos(angle) * 82
-                    const y1 = 100 + Math.sin(angle) * 82
-                    const x2 = 100 + Math.cos(angle + 0.12) * 96
-                    const y2 = 100 + Math.sin(angle + 0.12) * 96
-                    return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#111" strokeWidth="3" />
-                  })}
-                  {/* Sidewall ring */}
-                  <circle cx="100" cy="100" r="70" fill="#111" stroke="#2a2a2a" strokeWidth="1.5" />
-                  {/* Rim — multi-spoke alloy */}
-                  <circle cx="100" cy="100" r="58" fill="#191919" stroke="#333" strokeWidth="2" />
-                  {/* Spokes */}
-                  {[...Array(10)].map((_, i) => {
-                    const angle = (i * 36) * Math.PI / 180
-                    const x1 = 100 + Math.cos(angle) * 18
-                    const y1 = 100 + Math.sin(angle) * 18
-                    const x2 = 100 + Math.cos(angle) * 54
-                    const y2 = 100 + Math.sin(angle) * 54
-                    return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#2a2a2a" strokeWidth="5" strokeLinecap="round" />
-                  })}
-                  {/* Spoke cutouts (between spokes) */}
-                  {[...Array(10)].map((_, i) => {
-                    const angle = ((i * 36) + 18) * Math.PI / 180
-                    const x = 100 + Math.cos(angle) * 38
-                    const y = 100 + Math.sin(angle) * 38
-                    return <circle key={i} cx={x} cy={y} r="7" fill="#111" />
-                  })}
-                  {/* Hub center */}
-                  <circle cx="100" cy="100" r="16" fill="#1a1a1a" stroke="#333" strokeWidth="2" />
-                  {/* Center lock */}
-                  <circle cx="100" cy="100" r="7" fill="#222" stroke="#333" strokeWidth="1" />
-                  {/* Center lock detail */}
-                  <circle cx="100" cy="100" r="3" fill="#2a2a2a" />
-                </svg>
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-60 select-none pointer-events-none" style={{ fontSize: '3.15rem' }}>🏆</span>
-                <span className="relative bg-[#0a0a0a]/90 px-1 py-0 rounded-sm flex items-center gap-1">
-                  <span className="text-xl font-black tracking-tight text-[#7ED321]">GDR</span>
-                  <span className="text-xl font-light tracking-tight text-[#E8ECF4]">LEAGUE</span>
-                </span>
-              </div>
-            </NavLink>
+            {gdrLogo}
 
             <nav className="flex items-center gap-1">
               {ALL_NAV.slice(2).map(link => <NavItem key={link.to} {...link} />)}
             </nav>
           </div>
 
-          {/* Mobile — logo center + hamburger right */}
-          <NavLink to="/" className="md:hidden flex items-center gap-2">
-            <span className="text-lg font-black tracking-tight text-[#7ED321]">GDR</span>
-            <span className="text-lg font-light tracking-tight text-[#E8ECF4]">LEAGUE</span>
-          </NavLink>
+          {/* Mobile — same logo treatment as desktop, centered + hamburger right */}
+          <div className="md:hidden">
+            {gdrLogo}
+          </div>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="md:hidden absolute right-4 text-[#999999] hover:text-[#E8ECF4] transition-colors z-10"

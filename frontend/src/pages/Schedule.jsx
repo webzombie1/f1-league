@@ -15,6 +15,23 @@ function formatTime(timeStr) {
   return `${hr > 12 ? hr - 12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`
 }
 
+// "Today" / "Tomorrow" / "Thursday" (within 7 days) / "Next Thursday" (8-14 days)
+// / fallback "Thu, May 14" (further out). Bare day name covers the upcoming one;
+// "Next" is reserved for the day-of-week the week AFTER.
+function relativeDayLabel(dateStr) {
+  if (!dateStr) return ''
+  const race = new Date(dateStr + 'T00:00:00')
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.round((race - today) / 86400000)
+  if (diff === 0) return 'Today'
+  if (diff === 1) return 'Tomorrow'
+  const dayName = race.toLocaleDateString('en-US', { weekday: 'long' })
+  if (diff <= 7) return dayName
+  if (diff <= 14) return `Next ${dayName}`
+  return race.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
 export default function Schedule() {
   const [races, setRaces] = useState([])
   const [articleByRace, setArticleByRace] = useState({})
@@ -38,9 +55,24 @@ export default function Schedule() {
     return <div className="flex justify-center py-20"><p className="text-[#999999] text-sm">Loading...</p></div>
   }
 
+  const nextRace = [...races]
+    .filter(r => r.status === 'upcoming' && r.date)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))[0]
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      <h1 className="text-2xl font-bold text-[#E8ECF4]">Season Schedule</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-[#E8ECF4]">Season Schedule</h1>
+        {nextRace && (
+          <div className="text-right">
+            <p className="text-[10px] uppercase tracking-wider text-white">Next Race</p>
+            <p className="text-sm font-bold text-[#7ED321] leading-tight">{relativeDayLabel(nextRace.date)}</p>
+            {nextRace.time && (
+              <p className="text-xs text-[#999999] leading-tight mt-0.5">{formatTime(nextRace.time)}</p>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {races.map(race => (
