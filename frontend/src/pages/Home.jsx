@@ -167,10 +167,14 @@ export default function Home() {
   return (
     <div>
       {/* ── Hero Section ── */}
-      <div className="relative w-full max-w-[1200px] mx-auto h-[533px] overflow-hidden">
+      <div className="relative w-full max-w-[1400px] mx-auto h-[529px] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${heroImage})` }}
+          style={{
+            backgroundImage: `url(${heroImage})`,
+            maskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0D1117] via-[#0D1117]/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#0D1117]/80 to-transparent" />
