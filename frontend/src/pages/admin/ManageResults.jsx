@@ -1,5 +1,46 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { get, post, put, del } from '../../api'
+
+// Tiny CSV parser. Handles quoted fields (with embedded commas + escaped
+// quotes via "") and \r\n / \n line endings. We avoid pulling a library
+// since the schema is fixed and this stays trivial to audit.
+function parseCsv(text) {
+  const rows = []
+  let row = []
+  let cell = ''
+  let inQuotes = false
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++ }
+      else if (ch === '"') { inQuotes = false }
+      else { cell += ch }
+    } else {
+      if (ch === '"') { inQuotes = true }
+      else if (ch === ',') { row.push(cell); cell = '' }
+      else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = '' }
+      else if (ch === '\r') { /* skip — handled via \n */ }
+      else { cell += ch }
+    }
+  }
+  if (cell.length > 0 || row.length > 0) { row.push(cell); rows.push(row) }
+  return rows.filter(r => r.some(c => c && c.trim() !== ''))
+}
+
+const CSV_HEADERS = ['driver', 'position', 'grid', 'status', 'fastest_lap', 'best_lap_time', 'quali_time']
+const CSV_TEMPLATE = `${CSV_HEADERS.join(',')}\nLewis Hamilton,1,3,finished,true,1:24.123,1:23.456\nMax Verstappen,2,1,finished,false,1:23.567,1:22.987\nGeorge Russell,,,dnf,false,,\n`
+
+const parseTimeMs = (t) => {
+  if (!t) return null
+  const parts = String(t).trim().match(/^(\d+):(\d+)\.(\d+)$/)
+  if (!parts) return null
+  return (parseInt(parts[1]) * 60 + parseInt(parts[2])) * 1000 + parseInt(parts[3].padEnd(3, '0').slice(0, 3))
+}
+
+const parseBool = (v) => {
+  const s = String(v || '').trim().toLowerCase()
+  return s === 'true' || s === '1' || s === 'yes' || s === 'y'
+}
 
 export default function ManageResults() {
   const [races, setRaces] = useState([])
@@ -14,6 +55,11 @@ export default function ManageResults() {
   // Manual entry state
   const [manualMode, setManualMode] = useState(false)
   const [manualRows, setManualRows] = useState([])
+
+  // CSV upload state — parsed preview rows + driver-match info, shown
+  // before submission so the admin can spot unmatched names.
+  const [csvPreview, setCsvPreview] = useState(null)  // { rows: [{...}, ...], errors: [string] }
+  const fileInputRef = useRef(null)
 
   const inputCls = "bg-[#111111] border border-[#1F1F1F] rounded px-2 py-1 text-sm text-[#E8ECF4] focus:outline-none focus:border-[#7ED321]"
   const btnPrimary = "cursor-pointer bg-gradient-to-b from-[#7ED321] to-[#5BA318] border border-[#8EE835] text-[#0D1117] font-bold uppercase text-xs tracking-wider px-4 py-2 rounded transition-all"
@@ -109,6 +155,106 @@ export default function ManageResults() {
     setManualRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r))
   }
 
+  // CSV import: read file, parse, normalise headers, match drivers by
+  // case-insensitive name (with EA tag fallback), surface any errors so
+  // the admin can fix the CSV before we POST anything.
+  const handleCsvFile = async (file) => {
+    if (!file) return
+    let text
+    try { text = await file.text() }
+    catch { setCsvPreview({ rows: [], errors: [`Could not read ${file.name}`] }); return }
+    const rows = parseCsv(text)
+    if (rows.length < 2) {
+      setCsvPreview({ rows: [], errors: ['CSV is empty or missing data rows.'] })
+      return
+    }
+    const header = rows[0].map(h => h.trim().toLowerCase())
+    const idx = Object.fromEntries(CSV_HEADERS.map(h => [h, header.indexOf(h)]))
+    if (idx.driver < 0) {
+      setCsvPreview({ rows: [], errors: ['Missing required column: driver. Download the template for the expected format.'] })
+      return
+    }
+    const errors = []
+    const driversByName = new Map(drivers.map(d => [d.name.trim().toLowerCase(), d]))
+    const driversByTag = new Map(drivers.filter(d => d.ea_tag).map(d => [d.ea_tag.trim().toLowerCase(), d]))
+    const parsed = rows.slice(1).map((r, lineIdx) => {
+      const get = (key) => idx[key] >= 0 ? (r[idx[key]] || '').trim() : ''
+      const rawName = get('driver')
+      const match = driversByName.get(rawName.toLowerCase()) || driversByTag.get(rawName.toLowerCase()) || null
+      if (!match && rawName) errors.push(`Row ${lineIdx + 2}: no driver matched "${rawName}".`)
+      const status = (get('status') || 'finished').toLowerCase()
+      if (!['finished', 'dnf', 'dsq', 'dns'].includes(status)) {
+        errors.push(`Row ${lineIdx + 2}: invalid status "${get('status')}" (use finished/dnf/dsq/dns).`)
+      }
+      return {
+        driver_id: match?.id,
+        driver_name: match?.name || rawName,
+        team_name: match?.team_name || '',
+        matched: !!match,
+        position: get('position'),
+        grid_position: get('grid'),
+        status,
+        fastest_lap: parseBool(get('fastest_lap')),
+        best_lap_time: get('best_lap_time'),
+        quali_time: get('quali_time'),
+      }
+    })
+    // Only one driver can be marked fastest_lap.
+    let flSeen = false
+    for (const p of parsed) {
+      if (p.fastest_lap) {
+        if (flSeen) { p.fastest_lap = false }
+        else { flSeen = true }
+      }
+    }
+    setCsvPreview({ rows: parsed, errors })
+  }
+
+  const submitCsvResults = async () => {
+    if (!selectedRace || !csvPreview) return
+    setSaving(true)
+    try {
+      const payload = csvPreview.rows
+        .filter(r => r.matched && (r.position || r.status !== 'finished'))
+        .map(r => ({
+          driver_name: r.driver_name,
+          position: r.status === 'finished' && r.position ? parseInt(r.position) : null,
+          grid_position: r.grid_position ? parseInt(r.grid_position) : null,
+          status: r.status,
+          fastest_lap: r.fastest_lap,
+          best_lap_time_ms: parseTimeMs(r.best_lap_time),
+          quali_time_ms: parseTimeMs(r.quali_time),
+          laps_completed: 0,
+          num_pit_stops: 0,
+          gap_to_leader: '',
+        }))
+      if (payload.length === 0) {
+        alert('Nothing to submit — every row was either unmatched or empty.')
+        setSaving(false)
+        return
+      }
+      await post(`/admin/races/${selectedRace.id}/results`, { results: payload })
+      await loadResults(selectedRace.id)
+      setCsvPreview(null)
+      get('/races').then(setRaces).catch(() => {})
+    } catch (err) {
+      alert('Failed to submit: ' + err.message)
+    }
+    setSaving(false)
+  }
+
+  const downloadCsvTemplate = () => {
+    const blob = new Blob([CSV_TEMPLATE], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'race-results-template.csv'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const submitManualResults = async () => {
     if (!selectedRace) return
     setSaving(true)
@@ -192,17 +338,103 @@ export default function ManageResults() {
             <h2 className="text-lg font-semibold text-[#E8ECF4]">
               Round {selectedRace.round_number}: {selectedRace.track_name}
             </h2>
-            <div className="flex gap-2">
-              {!manualMode && (
-                <button onClick={startManualEntry} className={btnSecondary}>
-                  {results.length > 0 ? 'Re-enter Results' : 'Enter Results Manually'}
-                </button>
+            <div className="flex gap-2 flex-wrap">
+              {!manualMode && !csvPreview && (
+                <>
+                  <button onClick={() => fileInputRef.current?.click()} className={btnSecondary}>
+                    Upload CSV
+                  </button>
+                  <button onClick={downloadCsvTemplate} className={btnSecondary}>
+                    Template
+                  </button>
+                  <button onClick={startManualEntry} className={btnSecondary}>
+                    {results.length > 0 ? 'Re-enter Results' : 'Enter Results Manually'}
+                  </button>
+                </>
               )}
-              {results.length > 0 && !manualMode && (
+              {results.length > 0 && !manualMode && !csvPreview && (
                 <button onClick={() => clearResults(selectedRace.id)} className={btnDanger}>Clear All</button>
               )}
             </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                handleCsvFile(f)
+                e.target.value = ''  // allow re-uploading the same file
+              }}
+            />
           </div>
+
+          {/* CSV preview — review parsed rows before submitting */}
+          {csvPreview && (
+            <div className="bg-[#191919] border border-[#1F1F1F] rounded-xl overflow-x-auto">
+              <div className="p-4 flex items-center justify-between border-b border-[#1F1F1F]">
+                <p className="text-sm text-[#999999]">
+                  Parsed {csvPreview.rows.length} {csvPreview.rows.length === 1 ? 'row' : 'rows'} ·{' '}
+                  <span className={csvPreview.rows.filter(r => !r.matched).length ? 'text-red-400' : 'text-[#7ED321]'}>
+                    {csvPreview.rows.filter(r => r.matched).length} matched
+                  </span>
+                  {csvPreview.rows.filter(r => !r.matched).length > 0 && (
+                    <>, <span className="text-red-400">{csvPreview.rows.filter(r => !r.matched).length} unmatched</span></>
+                  )}
+                </p>
+              </div>
+              {csvPreview.errors.length > 0 && (
+                <div className="p-4 bg-red-900/20 border-b border-red-900/40">
+                  <p className="text-xs text-red-300 font-bold uppercase tracking-wider mb-2">Issues</p>
+                  <ul className="text-xs text-red-200 space-y-0.5 list-disc list-inside">
+                    {csvPreview.errors.map((e, i) => <li key={i}>{e}</li>)}
+                  </ul>
+                </div>
+              )}
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#1F1F1F] text-[#999999] text-xs uppercase tracking-wider">
+                    <th className="text-left py-3 px-3">Driver</th>
+                    <th className="text-center py-3 px-2 w-16">Grid</th>
+                    <th className="text-center py-3 px-2 w-24">Quali</th>
+                    <th className="text-center py-3 px-2 w-16">Pos</th>
+                    <th className="text-center py-3 px-2 w-24">Best Lap</th>
+                    <th className="text-center py-3 px-2 w-24">Status</th>
+                    <th className="text-center py-3 px-2 w-12">FL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {csvPreview.rows.map((r, i) => (
+                    <tr key={i} className={`border-b border-[#1F1F1F]/50 ${!r.matched ? 'bg-red-900/10' : ''}`}>
+                      <td className="py-2 px-3">
+                        <span className={`font-medium ${r.matched ? 'text-[#E8ECF4]' : 'text-red-300'}`}>
+                          {r.driver_name}
+                        </span>
+                        {r.matched
+                          ? <span className="text-[#777777] text-xs ml-2">{r.team_name}</span>
+                          : <span className="text-red-400 text-xs ml-2">no match</span>
+                        }
+                      </td>
+                      <td className="py-2 px-2 text-center text-[#E8ECF4]">{r.grid_position || '—'}</td>
+                      <td className="py-2 px-2 text-center text-[#E8ECF4] font-mono text-xs">{r.quali_time || '—'}</td>
+                      <td className="py-2 px-2 text-center text-[#E8ECF4]">{r.position || '—'}</td>
+                      <td className="py-2 px-2 text-center text-[#E8ECF4] font-mono text-xs">{r.best_lap_time || '—'}</td>
+                      <td className="py-2 px-2 text-center text-[#E8ECF4] uppercase text-xs">{r.status}</td>
+                      <td className="py-2 px-2 text-center">{r.fastest_lap ? '✓' : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="p-4 flex gap-3">
+                <button
+                  onClick={submitCsvResults}
+                  disabled={!csvPreview.rows.some(r => r.matched)}
+                  className={`${btnPrimary} disabled:opacity-40 disabled:cursor-not-allowed`}
+                >Submit Matched Rows</button>
+                <button onClick={() => setCsvPreview(null)} className={btnSecondary}>Cancel</button>
+              </div>
+            </div>
+          )}
 
           {/* Manual entry mode */}
           {manualMode && (
