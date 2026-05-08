@@ -177,9 +177,11 @@ export default function Home() {
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%)',
           }}
         />
-        {/* Gradients are only meaningful when text is overlaid — desktop only. */}
-        <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-[#0D1117] via-[#0D1117]/60 to-transparent" />
-        <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-[#0D1117]/80 to-transparent" />
+        {/* Light bottom-fade only — desktop only. The headline panel
+            (`bg-black/50 backdrop-blur-sm` further down) carries text
+            contrast on its own; stacking a left-side gradient on top of
+            both was washing the photo out. */}
+        <div className="hidden md:block absolute inset-0 bg-gradient-to-t from-[#0D1117]/60 via-[#0D1117]/20 to-transparent" />
 
         <div className="px-4 py-6 md:py-0 md:relative md:h-full md:max-w-6xl md:mx-auto md:flex md:flex-col md:justify-end md:pb-10">
           <p className="text-xs md:text-sm font-black uppercase tracking-[0.2em] text-[#7ED321] mb-3 md:mb-0">
