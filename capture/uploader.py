@@ -31,13 +31,22 @@ def upload_results(api_url, api_key, race_id, results):
         return False
 
 
-def save_to_file(race_id, results):
-    """Save results to a local JSON file as fallback."""
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"results_race_{race_id}_{timestamp}.json"
+def save_to_file(race_id, results, extra=None, label=''):
+    """Save results to a local JSON file. `extra` (optional dict) is
+    merged into the top-level payload — used to ship participant data
+    alongside results so manual recovery has the full picture.
 
+    `label` becomes a filename suffix (e.g. 'raw') so a successful run
+    can keep both an upload-shaped file and a debug sidecar."""
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    suffix = f"_{label}" if label else ''
+    filename = f"results_race_{race_id}_{timestamp}{suffix}.json"
+
+    payload = {'race_id': race_id, 'results': results}
+    if extra:
+        payload.update(extra)
     with open(filename, 'w') as f:
-        json.dump({'race_id': race_id, 'results': results}, f, indent=2)
+        json.dump(payload, f, indent=2, default=str)
 
     print(f"\nResults saved to {filename}")
     return filename

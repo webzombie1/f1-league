@@ -50,9 +50,39 @@ def parse_header(data):
 
 
 # ─── Participants (Packet ID 4) ────────────────────────────────────
-# After header: 1 byte numActiveCars, then 22 x ParticipantData
-PARTICIPANT_FORMAT = '<BB48sBBBBBBB'
+# After header: 1 byte numActiveCars, then 22 x ParticipantData (F1 25).
+#
+# F1 25 ParticipantData = 60 bytes:
+#   u8  m_aiControlled
+#   u8  m_driverId
+#   u8  m_networkId        <- added in F1 24
+#   u8  m_teamId
+#   u8  m_myTeam           <- added in F1 23
+#   u8  m_raceNumber
+#   u8  m_nationality
+#   char m_name[48]
+#   u8  m_yourTelemetry    <- 1 = PUBLIC (name + telemetry shared)
+#   u8  m_showOnlineNames
+#   u16 m_techLevel        <- added in F1 24
+#   u8  m_platform
+#
+# Privacy gotcha: if a player's "Your Telemetry" privacy setting is
+# RESTRICTED (default on some platforms), m_name will be "Player" /
+# generic regardless of struct correctness. Each league member needs
+# to set Telemetry → "Your Telemetry: Public" in F1 25 → Settings →
+# Telemetry Settings, or the name field is masked at the source.
+PARTICIPANT_FORMAT = '<BBBBBBB48sBBHB'
 PARTICIPANT_SIZE = struct.calcsize(PARTICIPANT_FORMAT)
+assert PARTICIPANT_SIZE == 60, f"ParticipantData should be 60 bytes for F1 25, got {PARTICIPANT_SIZE}"
+
+# Platform code → label. Helps in debug output / sidecar dumps.
+PLATFORM = {
+    1: 'steam',
+    3: 'playstation',
+    4: 'xbox',
+    6: 'origin',
+    255: 'unknown',
+}
 
 
 def parse_participants(data):
@@ -65,21 +95,24 @@ def parse_participants(data):
     for i in range(min(num_active, 22)):
         try:
             fields = struct.unpack_from(PARTICIPANT_FORMAT, data, offset + i * PARTICIPANT_SIZE)
-            name_bytes = fields[2]
+            name_bytes = fields[7]
             name = name_bytes.split(b'\x00')[0].decode('utf-8', errors='replace').strip()
 
             participants.append({
-                'index': i,
-                'ai_controlled': fields[0],
-                'driver_id': fields[1],
-                'name': name,
-                'team_id': fields[3],
-                'race_number': fields[4],
-                'nationality': fields[5],
-                'your_telemetry': fields[6],
-                'show_name': fields[7],
-                'platform': fields[8],
-                'num_custom_colours': fields[9],
+                'index':             i,
+                'ai_controlled':     fields[0],
+                'driver_id':         fields[1],
+                'network_id':        fields[2],
+                'team_id':           fields[3],
+                'my_team':           fields[4],
+                'race_number':       fields[5],
+                'nationality':       fields[6],
+                'name':              name,
+                'your_telemetry':    fields[8],
+                'show_online_names': fields[9],
+                'tech_level':        fields[10],
+                'platform':          fields[11],
+                'platform_label':    PLATFORM.get(fields[11], f'p{fields[11]}'),
             })
         except struct.error:
             break

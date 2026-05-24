@@ -71,6 +71,7 @@ def main():
     participants = {}  # index -> participant data
     fastest_lap = None  # {driver_index, lap_time_s}
     processed_sessions = set()  # session UIDs we've already processed
+    participants_dumped = False  # only dump the roster once per session
 
     # Open UDP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -102,6 +103,31 @@ def main():
                 participants = {p['index']: p for p in raw}
                 human_count = sum(1 for p in raw if p['ai_controlled'] == 0)
                 print(f"\rParticipants loaded: {len(raw)} total, {human_count} human", end='', flush=True)
+
+                # On the first parse, dump every entry so the user can
+                # verify names actually came through. If `your_telemetry`
+                # is 0 for a human, F1 25 masks the gamer tag at the
+                # source — the player must set their telemetry to
+                # PUBLIC in-game.
+                if not participants_dumped and raw:
+                    print()  # newline
+                    print(f"{'#':<3} {'AI':<3} {'Tele':<5} {'Plat':<5} {'Team':<5} {'Name'}")
+                    print("-" * 70)
+                    for p in raw:
+                        ai = 'AI' if p['ai_controlled'] else '.'
+                        tele = ('PUB' if p['your_telemetry'] == 1
+                                else ('AI ' if p['ai_controlled'] else 'PRV'))
+                        plat = p.get('platform_label', '?')[:5]
+                        team = str(p['team_id'])
+                        nm = p['name'] or '(empty)'
+                        print(f"{p['index']:<3} {ai:<3} {tele:<5} {plat:<5} {team:<5} {nm}")
+                    masked = [p for p in raw if p['ai_controlled'] == 0 and p['your_telemetry'] != 1]
+                    if masked:
+                        print()
+                        print(f"!! {len(masked)} human(s) have telemetry RESTRICTED — names masked at source.")
+                        print("   Have them open F1 25 → Settings → Telemetry → 'Your Telemetry: Public'.")
+                    participants_dumped = True
+                    print()
 
             # ── Event (fastest lap) ──
             elif packet_id == PACKET_EVENT:
@@ -164,14 +190,22 @@ def main():
                     best = f"{r['best_lap_time_ms'] / 1000:.3f}s" if r['best_lap_time_ms'] else '-'
                     print(f"{pos:<5} {r['driver_name']:<25} {r['status']:<10} {best}")
 
-                # Upload or save
+                # Always write a raw sidecar dump with the full
+                # participant + result data — even when the API upload
+                # succeeds. Lets you recover from misparsed names /
+                # privacy-masked entries after the fact without
+                # re-running the race.
+                save_to_file(
+                    args.race_id, results,
+                    extra={'participants': list(participants.values())},
+                    label='raw',
+                )
+
+                # Upload (or, if file mode, the dump above is the only artifact)
                 if args.output == 'api':
                     success = upload_results(args.api_url, args.api_key, args.race_id, results)
                     if not success:
-                        print("Falling back to file save...")
-                        save_to_file(args.race_id, results)
-                else:
-                    save_to_file(args.race_id, results)
+                        print("(API upload failed — raw sidecar already saved.)")
 
                 print("\nContinuing to listen (Ctrl+C to exit)...")
 
