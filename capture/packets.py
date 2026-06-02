@@ -6,7 +6,7 @@ Port: 20777
 
 import struct
 
-# ─── Packet IDs ─────────────────────────────────────────────────────
+# --- Packet IDs --------------------------------------------------
 PACKET_MOTION = 0
 PACKET_SESSION = 1
 PACKET_LAP_DATA = 2
@@ -24,7 +24,7 @@ PACKET_MOTION_EX = 13
 PACKET_TIME_TRIAL = 14
 PACKET_LAP_POSITIONS = 15
 
-# ─── Header ─────────────────────────────────────────────────────────
+# --- Header ------------------------------------------------------
 # All packets start with this header
 HEADER_FORMAT = '<HBBBBBQfIIBB'
 HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
@@ -49,7 +49,7 @@ def parse_header(data):
     }
 
 
-# ─── Participants (Packet ID 4) ────────────────────────────────────
+# --- Participants (Packet ID 4) ----------------------------------
 # After header: 1 byte numActiveCars, then 22 x ParticipantData (F1 25).
 #
 # F1 25 ParticipantData = 60 bytes:
@@ -69,13 +69,13 @@ def parse_header(data):
 # Privacy gotcha: if a player's "Your Telemetry" privacy setting is
 # RESTRICTED (default on some platforms), m_name will be "Player" /
 # generic regardless of struct correctness. Each league member needs
-# to set Telemetry → "Your Telemetry: Public" in F1 25 → Settings →
+# to set Telemetry -> "Your Telemetry: Public" in F1 25 -> Settings ->
 # Telemetry Settings, or the name field is masked at the source.
 PARTICIPANT_FORMAT = '<BBBBBBB48sBBHB'
 PARTICIPANT_SIZE = struct.calcsize(PARTICIPANT_FORMAT)
 assert PARTICIPANT_SIZE == 60, f"ParticipantData should be 60 bytes for F1 25, got {PARTICIPANT_SIZE}"
 
-# Platform code → label. Helps in debug output / sidecar dumps.
+# Platform code -> label. Helps in debug output / sidecar dumps.
 PLATFORM = {
     1: 'steam',
     3: 'playstation',
@@ -120,7 +120,7 @@ def parse_participants(data):
     return participants
 
 
-# ─── Final Classification (Packet ID 8) ────────────────────────────
+# --- Final Classification (Packet ID 8) --------------------------
 # After header: 1 byte numCars, then 22 x FinalClassificationData
 # Each entry: position(B), numLaps(B), gridPosition(B), points(B),
 #             numPitStops(B), resultStatus(B), resultReason(B),
@@ -231,7 +231,57 @@ def parse_final_classification(data):
     return results
 
 
-# ─── Event (Packet ID 3) ───────────────────────────────────────────
+# --- Session (Packet ID 1) ---------------------------------------
+# We only need the session type so the listener can tell qualifying
+# apart from the race. SessionData is a large packet, but the field we
+# care about sits at a fixed offset right after the header.
+#
+# Layout after the header (F1 25 SessionData prefix):
+#   u8  m_weather
+#   i8  m_trackTemperature
+#   i8  m_airTemperature
+#   u8  m_totalLaps
+#   u16 m_trackLength
+#   u8  m_sessionType   <- byte we read
+#
+# So m_sessionType lives at HEADER_SIZE + 6.
+
+SESSION_TYPE_NAMES = {
+    0: 'unknown',
+    1: 'P1', 2: 'P2', 3: 'P3', 4: 'Short P',
+    5: 'Q1', 6: 'Q2', 7: 'Q3', 8: 'Short Q', 9: 'OSQ',
+    10: 'SQ1', 11: 'SQ2', 12: 'SQ3', 13: 'Short SQ', 14: 'OSSQ',
+    15: 'Race', 16: 'Race 2', 17: 'Race 3', 18: 'Time Trial',
+}
+
+# Any session whose lap times we want to remember as qualifying times.
+# Covers regular quali (5-9) and sprint-weekend quali (10-14).
+QUALI_SESSION_TYPES = {5, 6, 7, 8, 9, 10, 11, 12, 13, 14}
+RACE_SESSION_TYPES = {15, 16, 17}
+
+
+def parse_session_data(data):
+    """Parse just the bit we care about from SessionData: the session type.
+    Returns dict with session_type (int) and session_type_label (str)."""
+    try:
+        session_type = struct.unpack_from('<B', data, HEADER_SIZE + 6)[0]
+    except struct.error:
+        return None
+    return {
+        'session_type': session_type,
+        'session_type_label': SESSION_TYPE_NAMES.get(session_type, f'type_{session_type}'),
+    }
+
+
+def is_quali_session(session_type):
+    return session_type in QUALI_SESSION_TYPES
+
+
+def is_race_session(session_type):
+    return session_type in RACE_SESSION_TYPES
+
+
+# --- Event (Packet ID 3) -----------------------------------------
 def parse_event_code(data):
     """Parse the event code string (4 chars after header)."""
     offset = HEADER_SIZE
