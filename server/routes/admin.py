@@ -404,10 +404,14 @@ async def submit_results(race_id: int, request: Request):
         position = r.get("position")
         status = r.get("status", "finished")
 
-        # Try to match driver by name (case-insensitive)
+        # Try to match driver by registered name OR in-game ea_tag
+        # (case-insensitive). The capture listener sends the gamertag, which
+        # rarely matches drivers.name, but each driver's gamertag is stored
+        # in drivers.ea_tag — so matching on either resolves cleanly.
         driver = execute(
-            "SELECT id FROM drivers WHERE season_id = ? AND LOWER(name) = LOWER(?)",
-            (race["season_id"], driver_name), fetch="one"
+            "SELECT id FROM drivers WHERE season_id = ? "
+            "AND (LOWER(name) = LOWER(?) OR (ea_tag != '' AND LOWER(ea_tag) = LOWER(?)))",
+            (race["season_id"], driver_name, driver_name), fetch="one"
         )
         driver_id = driver["id"] if driver else None
 
