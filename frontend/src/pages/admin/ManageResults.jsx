@@ -42,6 +42,42 @@ const parseBool = (v) => {
   return s === 'true' || s === '1' || s === 'yes' || s === 'y'
 }
 
+// Inline driver picker for a results row. Lets admin reassign a row to
+// any driver in the season — the long-term backup when the auto-upload
+// matcher in admin.submit_results gets the wrong driver. Underneath the
+// select we keep the raw uploaded name (driver_name_raw) when it
+// disagrees with the selected driver, so the audit trail is visible.
+function DriverCell({ row, drivers, updateResult, inputCls }) {
+  const raw = (row.driver_name_raw || '').trim()
+  const canonical = (row.driver_name || '').trim()
+  const showRaw = raw && raw.toLowerCase() !== canonical.toLowerCase()
+  const sorted = [...drivers].sort((a, b) => a.name.localeCompare(b.name))
+  return (
+    <div className="flex flex-col gap-0.5 min-w-[180px]">
+      <select
+        value={row.driver_id || ''}
+        onChange={e => {
+          const v = e.target.value
+          updateResult(row.id, { driver_id: v ? parseInt(v) : null })
+        }}
+        className={`${inputCls} font-medium text-[#E8ECF4]`}
+      >
+        <option value="">— unassigned —</option>
+        {sorted.map(d => (
+          <option key={d.id} value={d.id}>
+            {d.name}{d.team_name ? ` · ${d.team_name}` : ''}
+          </option>
+        ))}
+      </select>
+      {showRaw && (
+        <span className="text-[10px] text-amber-500/80 italic pl-1">
+          uploaded as: {raw}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export default function ManageResults() {
   const [races, setRaces] = useState([])
   const [drivers, setDrivers] = useState([])
@@ -593,8 +629,14 @@ export default function ManageResults() {
                       const idx = reorderIdxOf(r.id)
                       const canMoveUp = idx > 0
                       const canMoveDown = idx >= 0 && idx < reorderable.length - 1
+                      const unmatched = !r.driver_id
                       return (
-                        <tr key={r.id} className="border-b border-[#1F1F1F]/50">
+                        <tr
+                          key={r.id}
+                          className={`border-b border-[#1F1F1F]/50 ${
+                            unmatched ? 'bg-amber-500/[0.06] border-l-2 border-l-amber-500' : ''
+                          }`}
+                        >
                           <td className="py-2 px-1 text-center">
                             <div className="flex flex-col items-center gap-0.5">
                               <button
@@ -622,7 +664,9 @@ export default function ManageResults() {
                                   className={`${inputCls} w-14 text-center`}
                                 />
                               </td>
-                              <td className="py-2 px-2 font-medium text-[#E8ECF4]">{r.driver_name || r.driver_name_raw}</td>
+                              <td className="py-2 px-2">
+                                <DriverCell row={r} drivers={drivers} updateResult={updateResult} inputCls={inputCls} />
+                              </td>
                               <td className="py-2 px-2 text-center">
                                 <input
                                   type="text"
@@ -707,7 +751,9 @@ export default function ManageResults() {
                                   className={`${inputCls} w-14 text-center`}
                                 />
                               </td>
-                              <td className="py-2 px-2 font-medium text-[#E8ECF4]">{r.driver_name || r.driver_name_raw}</td>
+                              <td className="py-2 px-2">
+                                <DriverCell row={r} drivers={drivers} updateResult={updateResult} inputCls={inputCls} />
+                              </td>
                               <td className="py-2 px-2 text-center">
                                 <input
                                   type="text"
