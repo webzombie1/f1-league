@@ -404,16 +404,42 @@ async def submit_results(race_id: int, request: Request):
         position = r.get("position")
         status = r.get("status", "finished")
 
-        # Try to match driver by registered name OR in-game ea_tag
-        # (case-insensitive). The capture listener sends the gamertag, which
-        # rarely matches drivers.name, but each driver's gamertag is stored
-        # in drivers.ea_tag — so matching on either resolves cleanly.
-        driver = execute(
-            "SELECT id FROM drivers WHERE season_id = ? "
-            "AND (LOWER(name) = LOWER(?) OR (ea_tag != '' AND LOWER(ea_tag) = LOWER(?)))",
-            (race["season_id"], driver_name, driver_name), fetch="one"
-        )
-        driver_id = driver["id"] if driver else None
+        # Match driver in three passes, most specific to least:
+        #   1) exact case-insensitive match on drivers.name (full real name)
+        #   2) exact case-insensitive match on drivers.ea_tag (gamer tag)
+        #   3) unique substring of drivers.ea_tag (F1 25 sometimes uploads
+        #      truncated tags like "farlane10" when the real tag is
+        #      "jmcfarlane10" — we trust the match only if exactly one
+        #      driver's tag contains the uploaded string).
+        # When matched via ea_tag (steps 2-3) we also rewrite driver_name
+        # to the canonical drivers.name so it stores cleanly downstream.
+        raw = (driver_name or "").strip()
+        driver_id = None
+        if raw:
+            row = execute(
+                "SELECT id, name FROM drivers WHERE season_id = ? AND LOWER(name) = LOWER(?)",
+                (race["season_id"], raw), fetch="one"
+            )
+            if row:
+                driver_id = row["id"]
+
+            if not driver_id:
+                row = execute(
+                    "SELECT id, name FROM drivers WHERE season_id = ? AND ea_tag != '' AND LOWER(ea_tag) = LOWER(?)",
+                    (race["season_id"], raw), fetch="one"
+                )
+                if row:
+                    driver_id = row["id"]
+                    driver_name = row["name"]
+
+            if not driver_id:
+                candidates = execute(
+                    "SELECT id, name FROM drivers WHERE season_id = ? AND ea_tag != '' AND LOWER(ea_tag) LIKE LOWER(?)",
+                    (race["season_id"], f"%{raw}%"), fetch="all"
+                )
+                if len(candidates) == 1:
+                    driver_id = candidates[0]["id"]
+                    driver_name = candidates[0]["name"]
 
         # Check if this driver is an AI substitute — remap to human driver
         if driver_id and driver_id in ai_to_human:
